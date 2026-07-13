@@ -40,7 +40,7 @@ add_compile_definitions(SYS_CLK_MHZ=150) # set clock to 150MHz (RP2350 default c
 pico_sdk_init()
 
 add_executable(${PROJECT_NAME}
-  src/hw_test_v2.cpp
+  src/v2_gb.cpp
   src/hw_config.c
 )
 

@@ -3,7 +3,7 @@
 #include "v2_gb.hpp"
 #include "v2_hw_def.h"
 
-#define SCALING_2X 1
+#define SCALING_2X 0
 
 // hw lib init
 ledStatus Led = ledStatus(PIN_LED_WL_1, PIN_LED_WL_2, PIN_LED_WL_3, PIN_LED_WL_4);
@@ -98,8 +98,6 @@ union core_cmd {
 
 static uint8_t pixels_buffer[LCD_WIDTH];
 
-extern const uint8_t rom_data[];
-const uint8_t* rom = rom_data;
 static unsigned char rom_bank0[65536];
 
 static uint8_t ram[32768];
@@ -113,10 +111,11 @@ static uint8_t manual_palette_selected=0;
 uint8_t gb_rom_read(struct gb_s *gb, const uint_fast32_t addr)
 {
   (void) gb;
-  if(addr < sizeof(rom_bank0))
-    return rom_bank0[addr];
+  // if(addr < sizeof(rom_bank0))
+  //   return rom_bank0[addr];
 
-  return rom[addr];
+  // return rom[addr];
+  return rom_bank0[addr];
 }
 
 /**
@@ -201,6 +200,8 @@ void lcd_draw_line(struct gb_s *gb, const uint8_t pixels[LCD_WIDTH],
   __atomic_store_n(&lcd_line_busy, 1, __ATOMIC_SEQ_CST);
   multicore_fifo_push_blocking(cmd.full);
 }
+
+void rom_file_selector(void);
 
 int main() { // uses core 0 to sub core
   // log init
@@ -448,16 +449,19 @@ void core1_entry() { // uses core 1 to main core
 
   while (1) {
     Graphic.fillScreen(LCD_BLACK);
+
+    rom_file_selector();
+//    memcpy(rom_bank0, rom, sizeof(rom_bank0));
+
+    Graphic.fillScreen(LCD_BLACK);
+    Graphic.setTextColor(LCD_WHITE, LCD_BLACK);
 #if SCALING_2X
     Graphic.draw_rect(80, 16, LCD_WIDTH*2, LCD_HEIGHT*2, LCD_WHITE);
 #else
     Graphic.draw_rect(160, 88, LCD_WIDTH, LCD_HEIGHT, LCD_WHITE);
 #endif
-    Graphic.setTextColor(LCD_WHITE, LCD_BLACK);
-//    rom_file_selector();
 
     /* Initialise GB context. */
-    memcpy(rom_bank0, rom, sizeof(rom_bank0));
     ret = gb_init(&gb, &gb_rom_read, &gb_cart_ram_read,
             &gb_cart_ram_write, &gb_error, NULL);
     if(ret != GB_INIT_NO_ERROR)
@@ -488,17 +492,267 @@ void core1_entry() { // uses core 1 to main core
 
       frames++;
 
-      gb.direct.joypad_bits.up      = !Gamepad.is_btn_pressed(BTN_S1_UP);
-      gb.direct.joypad_bits.down    = !Gamepad.is_btn_pressed(BTN_S1_DOWN);
-      gb.direct.joypad_bits.left    = !Gamepad.is_btn_pressed(BTN_S1_LEFT);
-      gb.direct.joypad_bits.right   = !Gamepad.is_btn_pressed(BTN_S1_RIGHT);
+      gb.direct.joypad_bits.up      = !(Gamepad.is_btn_pressed(BTN_S1_UP) || Gamepad.is_btn_pressed(BTN_UP));
+      gb.direct.joypad_bits.down    = !(Gamepad.is_btn_pressed(BTN_S1_DOWN) || Gamepad.is_btn_pressed(BTN_DOWN));
+      gb.direct.joypad_bits.left    = !(Gamepad.is_btn_pressed(BTN_S1_LEFT) || Gamepad.is_btn_pressed(BTN_LEFT));
+      gb.direct.joypad_bits.right   = !(Gamepad.is_btn_pressed(BTN_S1_RIGHT) || Gamepad.is_btn_pressed(BTN_RIGHT));
       gb.direct.joypad_bits.a       = !Gamepad.is_btn_pressed(BTN_A);
       gb.direct.joypad_bits.b       = !Gamepad.is_btn_pressed(BTN_B);
       gb.direct.joypad_bits.select  = !Gamepad.is_btn_pressed(BTN_SELECT);
       gb.direct.joypad_bits.start   = !Gamepad.is_btn_pressed(BTN_START);
+
+      // capture
+      if(Gamepad.is_btn_pressed(BTN_SUB1)) {
+
+      }
+      // exit
+      if(Gamepad.is_btn_pressed(BTN_SUB2)) {
+
+        break;
+      }
     }
 
     LOGI("Emulation Ended");
+  }
+}
+
+static int global_printer_wrapper(const char* format, ...) {
+  va_list args;
+  va_start(args, format);
+  
+  int result = Graphic.vprintf(format, args); 
+  
+  va_end(args);
+  return result;
+}
+
+void display_cat(const char *path) {
+    FIL fil;
+    FRESULT fr = f_open(&fil, path, FA_READ);
+    if (FR_OK != fr) {
+      Graphic.printf("f_open error: %s (%d)\n", FRESULT_str(fr), fr);
+      return;
+    }
+    char buf[256];
+    while (f_gets(buf, sizeof buf, &fil)) {
+      Graphic.printf("%s", buf);
+    }
+    if f_error(&fil)
+      Graphic.printf("f_gets error\n");
+    fr = f_close(&fil);
+    if (FR_OK != fr) Graphic.printf("f_close error: %s (%d)\n", FRESULT_str(fr), fr);
+}
+
+void load_rom(const char *path) {
+  FIL fil;
+  FRESULT fr = f_open(&fil, path, FA_READ);
+  if (FR_OK != fr) {
+    Graphic.printf("f_open error: %s (%d)\n", FRESULT_str(fr), fr);
+    return;
+  }
+
+  uint8_t buf[256];
+  UINT bytes_read;
+  size_t pos = 0;
+
+  while (1) {
+    fr = f_read(&fil, buf, sizeof buf, &bytes_read);
+    if (FR_OK != fr) {
+      Graphic.printf("f_read error: %s (%d)\n", FRESULT_str(fr), fr);
+      break;
+    }
+
+    if (bytes_read == 0) {
+      break;
+    }
+
+    memcpy(&rom_bank0[pos], buf, bytes_read);
+    pos += bytes_read;
+  }
+
+  fr = f_close(&fil);
+  if (FR_OK != fr) {
+    Graphic.printf("f_close error: %s (%d)\n", FRESULT_str(fr), fr);
+  }
+}
+
+void ls_cursor(const char *dir, int cursor, char* cursor_path, uint8_t* cursor_type) {
+    char cwdbuf[FF_LFN_BUF] = {0};
+    FRESULT fr; /* Return value */
+    char const *p_dir;
+    if (dir[0]) {
+        p_dir = dir;
+    } else {
+        fr = f_getcwd(cwdbuf, sizeof cwdbuf);
+        if (FR_OK != fr) {
+            Graphic.printf("f_getcwd error: %s (%d)\n", FRESULT_str(fr), fr);
+            return;
+        }
+        p_dir = cwdbuf;
+    }
+    printf("Directory Listing: %s\n", p_dir);
+    DIR dj = {};      /* Directory object */
+    FILINFO fno = {}; /* File information */
+    assert(p_dir);
+    fr = f_findfirst(&dj, &fno, p_dir, "*");
+    if (FR_OK != fr) {
+        Graphic.printf("f_findfirst error: %s (%d)\n", FRESULT_str(fr), fr);
+        return;
+    }
+
+    int count = 0;
+    uint8_t type = 0;
+    *cursor_type = type;
+
+    while (fr == FR_OK && fno.fname[0]) { /* Repeat while an item is found */
+        /* Create a string that includes the file name, the file size and the
+         attributes string. */
+        const char *pcWritableFile = "writable file",
+                   *pcReadOnlyFile = "read only file",
+                   *pcDirectory = "directory";
+        const char *pcAttrib;
+        /* Point pcAttrib to a string that describes the file. */
+        if (fno.fattrib & AM_DIR) {
+            pcAttrib = pcDirectory;
+            type = 1;
+        } else if (fno.fattrib & AM_RDO) {
+            pcAttrib = pcReadOnlyFile;
+            type = 2;
+        } else {
+            pcAttrib = pcWritableFile;
+            type = 3;
+        }
+        /* Create a string that includes the file name, the file size and the
+         attributes string. */
+        if(count == cursor) {
+          strncpy(cursor_path, fno.fname, 512);
+          Graphic.set_text_color(LCD_BLACK, LCD_WHITE);
+          *cursor_type = type;
+        } else {
+          Graphic.set_text_color(LCD_WHITE, LCD_BLACK);
+        }
+        // Graphic.printf("%s [%s] [size=%llu]\n", fno.fname, pcAttrib, fno.fsize);
+        Graphic.printf("%s [%s]\n", fno.fname, pcAttrib);
+
+        fr = f_findnext(&dj, &fno); /* Search for next item */
+        count++;
+    }
+    f_closedir(&dj);
+}
+
+char rom_path[512] = "";
+
+void rom_file_selector(void) {
+  Graphic.setTextSize(2);
+  Graphic.setCursor(0,0);
+  Graphic.print("Select ROM");
+
+  Graphic.setCursor(0,16);
+  Graphic.print("Loading...");
+
+  enum sd_status status = SD_NO_CARD;
+  enum sd_status prev_status = SD_CARD_ERR;
+
+  bool displaying_info = false;
+  bool need_display_update = true;
+
+  char path[512] = "";
+  char cursor_path[512] = "";
+  uint8_t cursor = 0;
+  uint8_t cursor_type = 0;
+  bool file_reading = false;
+
+
+    while(1) {
+    sleep_ms(100);
+
+    status = Sd.get_status();
+    if(prev_status != status) {
+      prev_status = status;
+      Graphic.setCursor(0,16);
+      Graphic.print("SD card : ");
+      switch(status) {
+        case SD_NO_CARD:
+          Graphic.print("not inserted\n");
+          strcpy(path, "");
+          file_reading = false;
+          cursor = 0;
+          displaying_info = false;
+          break;
+        case SD_NOT_MOUNTED:
+          Graphic.print("not mounted \n");
+          break;
+        case SD_MOUNTING:
+          Graphic.print("mounting... \n");
+          break;
+        case SD_MOUNTED:
+          Graphic.print("mounted     \n");
+          break;
+        case SD_CARD_ERR:
+          Graphic.print("ERROR!!     \n");
+          break;
+        default:
+          break;
+      }
+      need_display_update = true;
+    }
+
+    if(need_display_update) {
+      need_display_update = false;
+      Graphic.fillRect(0,16*2,480,(320-32),LCD_BLACK);
+      Graphic.setCursor(0,16*3);
+      if(status == SD_MOUNTED) {
+        Graphic.set_font(G_FONT_16);
+        FRESULT fr = f_getcwd(path, 512);
+        if (FR_OK == fr) {
+          if(file_reading) {
+            Graphic.print("Loading ROM...");
+            load_rom(cursor_path);
+            Graphic.set_font(G_FONT_5X8);
+            return;
+          } else {
+            Graphic.printf("list of '%s'\n", path);
+            ls_cursor(path, cursor, cursor_path, &cursor_type);
+          }
+        }
+        Graphic.set_font(G_FONT_5X8);
+        Graphic.set_text_color(LCD_WHITE, LCD_BLACK);
+      }
+    }
+
+    if(Gamepad.is_btn_pressed(BTN_START)) {
+      displaying_info = !displaying_info;
+      need_display_update = true;
+    }
+    if(Gamepad.is_btn_pressed(BTN_A)) {
+      if(cursor_type) {
+        if(cursor_type == 1) { // directory
+          f_chdir(cursor_path);
+          cursor = 0;
+        } else { // file
+          file_reading = true;
+        }
+        need_display_update = true;
+      }
+    }
+    if(Gamepad.is_btn_pressed(BTN_B)) {
+      if(file_reading) {
+        file_reading = false;
+      } else {
+        f_chdir("..");
+        cursor = 0;
+      }
+      need_display_update = true;
+    }
+
+    if(Gamepad.is_btn_pressed(BTN_S1_UP)) {
+      if(cursor > 0) cursor--;
+      need_display_update = true;
+    }
+    if(Gamepad.is_btn_pressed(BTN_S1_DOWN)) {
+      if(cursor < 128) cursor++;
+      need_display_update = true;
+    }
   }
 }
 

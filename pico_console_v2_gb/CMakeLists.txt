@@ -42,7 +42,6 @@ pico_sdk_init()
 add_executable(${PROJECT_NAME}
   src/v2_gb.cpp
   src/hw_config.c
-  src/rom.c #test
 )
 
 add_subdirectory(common)

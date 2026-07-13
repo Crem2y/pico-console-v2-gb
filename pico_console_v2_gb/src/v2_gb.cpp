@@ -95,8 +95,9 @@ union core_cmd {
 };
 
 static uint8_t pixels_buffer[LCD_WIDTH];
-
-static unsigned char rom_bank0[65536];
+#define ROM_BANK0_SIZE (1 * 1024 * 1024)
+//static unsigned char rom_bank0[ROM_BANK0_SIZE];
+unsigned char* rom_bank0 = (unsigned char*)PSRAM_BASE + (1 * 1024 * 1024);
 
 static uint8_t ram[32768];
 static int lcd_line_busy = 0;
@@ -111,10 +112,6 @@ bool scaling_2x = false;
 uint8_t gb_rom_read(struct gb_s *gb, const uint_fast32_t addr)
 {
   (void) gb;
-  // if(addr < sizeof(rom_bank0))
-  //   return rom_bank0[addr];
-
-  // return rom[addr];
   return rom_bank0[addr];
 }
 
@@ -509,7 +506,7 @@ void core1_entry() { // uses core 1 to main core
       if(Gamepad.is_btn_pressed(BTN_SUB1)) {
 
       }
-      // exit
+      // save & exit
       if(Gamepad.is_btn_pressed(BTN_SUB2)) {
 
         sleep_ms(100);
@@ -573,6 +570,9 @@ void load_rom(const char *path) {
 
     memcpy(&rom_bank0[pos], buf, bytes_read);
     pos += bytes_read;
+    if(pos > ROM_BANK0_SIZE) {
+      break;
+    }
   }
 
   fr = f_close(&fil);

@@ -41,6 +41,9 @@
 #include "imu.hpp"
 #include "ir_link.hpp"
 
+#include "gbcolors.h"
+#include "peanut_gb.h"
+
 enum menu_main {
   MAIN_SYSTEM_INFO,
   MAIN_BTN_TEST,

@@ -1,6 +1,6 @@
 // headers
 #include "common.h"
-#include "hw_test.hpp"
+#include "v2_gb.hpp"
 #include "v2_hw_def.h"
 
 // hw lib init

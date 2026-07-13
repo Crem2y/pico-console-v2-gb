@@ -104,7 +104,7 @@ static int lcd_line_busy = 0;
 static palette_t palette;	// Colour palette
 static uint8_t manual_palette_selected=0;
 
-bool scaling_2x = false;
+bool scaling_2x = true;
 
 /**
  * Returns a byte from the ROM file at the given address.
@@ -480,6 +480,8 @@ void core1_entry() { // uses core 1 to main core
 
     gb_init_lcd(&gb, &lcd_draw_line);
     uint_fast32_t frames = 0;
+    gb.direct.frame_skip = true;
+    gb.direct.interlace = true;
 
     while(1)
     {
@@ -503,8 +505,22 @@ void core1_entry() { // uses core 1 to main core
       gb.direct.joypad_bits.select  = !Gamepad.is_btn_pressed(BTN_SELECT);
       gb.direct.joypad_bits.start   = !Gamepad.is_btn_pressed(BTN_START);
 
+      // set frame skip
+      if(Gamepad.is_btn_pressed(BTN_S1_CENTER) && Gamepad.is_btn_pressed(BTN_ZL)) {
+        gb.direct.frame_skip = !gb.direct.frame_skip;
+        sleep_ms(100);
+        Graphic.setCursor(0,0);
+        Graphic.printf("frame_skip : %s", gb.direct.frame_skip ? "yes" : "no ");
+      }
+      // set interlace
+      if(Gamepad.is_btn_pressed(BTN_S1_CENTER) && Gamepad.is_btn_pressed(BTN_ZR)) {
+        gb.direct.interlace = !gb.direct.interlace;
+        sleep_ms(100);
+        Graphic.setCursor(0,0);
+        Graphic.printf("interlace  : %s", gb.direct.interlace ? "yes" : "no ");
+      }
       // scaling
-      if(Gamepad.is_btn_pressed(BTN_ZL) && Gamepad.is_btn_pressed(BTN_ZR)) {
+      if(Gamepad.is_btn_pressed(BTN_S2_CENTER)) {
         scaling_2x = !scaling_2x;
         sleep_ms(100);
         Graphic.fill_rect(80, 16, LCD_WIDTH*2, LCD_HEIGHT*2, LCD_BLACK);

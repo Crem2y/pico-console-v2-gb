@@ -41,6 +41,7 @@
 #include "imu.hpp"
 #include "ir_link.hpp"
 
+#include "gb_apu.hpp"
 #include "gbcolors.h"
 #include "peanut_gb.h"
 

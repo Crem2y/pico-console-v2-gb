@@ -81,7 +81,7 @@
  * before including peanut_gb.h in order for these functions to be used.
  */
 #ifndef ENABLE_SOUND
-# define ENABLE_SOUND 0
+# define ENABLE_SOUND 1
 #endif
 
 /* Enable LCD drawing. On by default. May be turned off for testing purposes. */

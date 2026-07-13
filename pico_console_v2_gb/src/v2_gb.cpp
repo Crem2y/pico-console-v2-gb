@@ -442,12 +442,19 @@ void core1_entry() { // uses core 1 to main core
 
   static struct gb_s gb;
 	enum gb_init_error_e ret;
+  bool boot_sound = true;
 
   while (1) {
     Graphic.fillScreen(LCD_BLACK);
 
+    if(!boot_sound) {
+      audio_init();
+    }
     rom_file_selector();
-//    memcpy(rom_bank0, rom, sizeof(rom_bank0));
+    if(boot_sound) {
+      audio_init();
+      boot_sound = false;
+    }
 
     Graphic.fillScreen(LCD_BLACK);
     Graphic.setTextColor(LCD_WHITE, LCD_BLACK);
@@ -474,7 +481,6 @@ void core1_entry() { // uses core 1 to main core
     gb_init_lcd(&gb, &lcd_draw_line);
     uint_fast32_t frames = 0;
 
-    uint64_t start_time = time_us_64();
     while(1)
     {
       int input;

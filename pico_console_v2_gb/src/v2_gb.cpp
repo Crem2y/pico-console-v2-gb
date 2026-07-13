@@ -3,8 +3,6 @@
 #include "v2_gb.hpp"
 #include "v2_hw_def.h"
 
-#define SCALING_2X 0
-
 // hw lib init
 ledStatus Led = ledStatus(PIN_LED_WL_1, PIN_LED_WL_2, PIN_LED_WL_3, PIN_LED_WL_4);
 ili9488_40 Lcd = ili9488_40(PIN_DP_MOSI, PIN_DP_SCK, PIN_DP_CS, PIN_DP_DC, PIN_DP_RST, PIN_DP_BL);
@@ -105,6 +103,8 @@ static int lcd_line_busy = 0;
 static palette_t palette;	// Colour palette
 static uint8_t manual_palette_selected=0;
 
+bool scaling_2x = false;
+
 /**
  * Returns a byte from the ROM file at the given address.
  */
@@ -155,31 +155,30 @@ void gb_error(struct gb_s *gb, const enum gb_error_e gb_err, const uint16_t addr
 
 void core0_lcd_draw_line(const uint_fast8_t line)
 {
-#if SCALING_2X
-  static uint16_t fb[LCD_WIDTH*2];
+  if(scaling_2x) {
+    static uint16_t fb[LCD_WIDTH*2];
 
-  for(unsigned int x = 0; x < LCD_WIDTH; x++)
-  {
-    fb[x*2] = palette[(pixels_buffer[x] & LCD_PALETTE_ALL) >> 4]
-        [pixels_buffer[x] & 3];
-    fb[x*2+1] = fb[x*2];
+    for(unsigned int x = 0; x < LCD_WIDTH; x++)
+    {
+      fb[x*2] = palette[(pixels_buffer[x] & LCD_PALETTE_ALL) >> 4]
+          [pixels_buffer[x] & 3];
+      fb[x*2+1] = fb[x*2];
+    }
+
+    Graphic.draw_picture(80, 16+(line*2),   LCD_WIDTH*2, 1, fb);
+    Graphic.draw_picture(80, 16+(line*2)+1, LCD_WIDTH*2, 1, fb);
+  } else {
+    static uint16_t fb[LCD_WIDTH];
+
+    for(unsigned int x = 0; x < LCD_WIDTH; x++)
+    {
+      fb[x] = palette[(pixels_buffer[x] & LCD_PALETTE_ALL) >> 4]
+          [pixels_buffer[x] & 3];
+    }
+
+    Graphic.draw_picture(160, 88+(line), LCD_WIDTH, 1, fb);
   }
-
-  Graphic.draw_picture(80, 16+(line*2),   LCD_WIDTH*2, 1, fb);
-  Graphic.draw_picture(80, 16+(line*2)+1, LCD_WIDTH*2, 1, fb);
   __atomic_store_n(&lcd_line_busy, 0, __ATOMIC_SEQ_CST);
-#else
-  static uint16_t fb[LCD_WIDTH];
-
-  for(unsigned int x = 0; x < LCD_WIDTH; x++)
-  {
-    fb[x] = palette[(pixels_buffer[x] & LCD_PALETTE_ALL) >> 4]
-        [pixels_buffer[x] & 3];
-  }
-
-  Graphic.draw_picture(160, 88+(line), LCD_WIDTH, 1, fb);
-  __atomic_store_n(&lcd_line_busy, 0, __ATOMIC_SEQ_CST);
-#endif
 }
 
 void lcd_draw_line(struct gb_s *gb, const uint8_t pixels[LCD_WIDTH],
@@ -455,11 +454,11 @@ void core1_entry() { // uses core 1 to main core
 
     Graphic.fillScreen(LCD_BLACK);
     Graphic.setTextColor(LCD_WHITE, LCD_BLACK);
-#if SCALING_2X
-    Graphic.draw_rect(80, 16, LCD_WIDTH*2, LCD_HEIGHT*2, LCD_WHITE);
-#else
-    Graphic.draw_rect(160, 88, LCD_WIDTH, LCD_HEIGHT, LCD_WHITE);
-#endif
+    if(scaling_2x) {
+      Graphic.draw_rect(80, 16, LCD_WIDTH*2, LCD_HEIGHT*2, LCD_WHITE);
+    } else {
+      Graphic.draw_rect(160, 88, LCD_WIDTH, LCD_HEIGHT, LCD_WHITE);
+    }
 
     /* Initialise GB context. */
     ret = gb_init(&gb, &gb_rom_read, &gb_cart_ram_read,
@@ -501,6 +500,11 @@ void core1_entry() { // uses core 1 to main core
       gb.direct.joypad_bits.select  = !Gamepad.is_btn_pressed(BTN_SELECT);
       gb.direct.joypad_bits.start   = !Gamepad.is_btn_pressed(BTN_START);
 
+      // scaling
+      if(Gamepad.is_btn_pressed(BTN_ZL) && Gamepad.is_btn_pressed(BTN_ZR)) {
+        scaling_2x = !scaling_2x;
+        Graphic.fill_rect(80, 16, LCD_WIDTH*2, LCD_HEIGHT*2, LCD_BLACK);
+      }
       // capture
       if(Gamepad.is_btn_pressed(BTN_SUB1)) {
 
@@ -508,6 +512,7 @@ void core1_entry() { // uses core 1 to main core
       // exit
       if(Gamepad.is_btn_pressed(BTN_SUB2)) {
 
+        sleep_ms(100);
         break;
       }
     }

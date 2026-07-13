@@ -500,6 +500,7 @@ void core1_entry() { // uses core 1 to main core
       // scaling
       if(Gamepad.is_btn_pressed(BTN_ZL) && Gamepad.is_btn_pressed(BTN_ZR)) {
         scaling_2x = !scaling_2x;
+        sleep_ms(100);
         Graphic.fill_rect(80, 16, LCD_WIDTH*2, LCD_HEIGHT*2, LCD_BLACK);
       }
       // capture
@@ -646,6 +647,7 @@ void ls_cursor(const char *dir, int cursor, char* cursor_path, uint8_t* cursor_t
 }
 
 char rom_path[512] = "";
+char rom_name[512] = "";
 
 void rom_file_selector(void) {
   Graphic.setTextSize(2);

@@ -30,6 +30,7 @@ struct gb_voice_state_t {
 
 static gb_voice_state_t voice_state[GB_APU_CH_COUNT] = {};
 
+static bool wave_ram_dirty = false;
 
 /* -------------------------------------------------------------------------- */
 /* Register access helpers                                                    */
@@ -552,6 +553,7 @@ static void gb_update_master_enable(void) {
 void audio_init(void) {
   memset(apu_mmio, 0, sizeof(apu_mmio));
   memset(voice_state, 0, sizeof(voice_state));
+  wave_ram_dirty = true;
 
   Audio.set_wave(GB_APU_CH1, WAVE_SQUARE_12);
   Audio.set_wave(GB_APU_CH2, WAVE_SQUARE_12);
@@ -643,6 +645,10 @@ void audio_write(const uint16_t addr, const uint8_t val) {
 
     case 0xFF1E:
       if (val & 0x80) {
+        if (wave_ram_dirty) {
+          Audio.send_bridge_wave_data_32s(&apu_mmio[0xFF30 - APU_ADDR_BASE]);
+          wave_ram_dirty = false;
+        }
         gb_trigger_ch3();
       } else {
         gb_update_ch3_frequency();
@@ -696,7 +702,7 @@ void audio_write(const uint16_t addr, const uint8_t val) {
     case 0xFF3D:
     case 0xFF3E:
     case 0xFF3F:
-      Audio.send_bridge_wave_data_32s(&apu_mmio[0xFF30 - APU_ADDR_BASE]);
+      wave_ram_dirty = true;
       break;
 
     default:

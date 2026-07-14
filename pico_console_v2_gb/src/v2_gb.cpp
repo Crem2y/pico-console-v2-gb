@@ -424,8 +424,8 @@ void core1_entry() { // uses core 1 to main core
   LedCtrl.set_mode(LED_CTRL_4, LED_DARKER);
 
   music_note_t boot_notes[2] = {
-    {0, 6, 0, 32},   // C6
-    {0, 7, 0, 32}    // C7
+    {4, 6, 0, 32},   // C6
+    {4, 7, 0, 32}    // C7
   };
 
   music_table_t boot_music = {
@@ -436,7 +436,7 @@ void core1_entry() { // uses core 1 to main core
 
   Audio.set_master_config(127);
   for(int i=0; i<4; i++) {
-    Audio.set_env(i, 25000, 1);
+    Audio.set_env(i+4, 25000, 1);
   }
 
   // if SELECT+START, quiet boot
@@ -725,7 +725,6 @@ void rom_file_selector(void) {
   uint8_t cursor_type = 0;
   bool file_reading = false;
 
-
     while(1) {
     sleep_ms(100);
 
@@ -827,11 +826,11 @@ void rom_file_selector(void) {
       need_display_update = true;
     }
 
-    if(Gamepad.is_btn_pressed(BTN_S1_UP)) {
+    if(Gamepad.is_btn_pressed(BTN_S1_UP) || Gamepad.is_btn_pressed(BTN_UP)) {
       if(cursor > 0) cursor--;
       need_display_update = true;
     }
-    if(Gamepad.is_btn_pressed(BTN_S1_DOWN)) {
+    if(Gamepad.is_btn_pressed(BTN_S1_DOWN) || Gamepad.is_btn_pressed(BTN_DOWN)) {
       if(cursor < 128) cursor++;
       need_display_update = true;
     }

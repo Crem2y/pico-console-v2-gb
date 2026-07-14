@@ -99,7 +99,8 @@ static uint8_t pixels_buffer[LCD_WIDTH];
 //static unsigned char rom_bank0[ROM_BANK0_SIZE];
 unsigned char* rom_bank0 = (unsigned char*)PSRAM_BASE + (1 * 1024 * 1024);
 
-static uint8_t ram[32768];
+#define CARTRIDGE_RAM_SIZE (32768)
+static uint8_t ram[CARTRIDGE_RAM_SIZE];
 static int lcd_line_busy = 0;
 static palette_t palette;	// Colour palette
 static uint8_t manual_palette_selected=0;
@@ -145,7 +146,7 @@ void gb_error(struct gb_s *gb, const enum gb_error_e gb_err, const uint16_t addr
       "INVALID READ",
       "INVALID WRITE"
     };
-  printf("Error %d occurred: %s at %04X\n.\n", gb_err, gb_err_str[gb_err], addr);
+  LOGE("Error %d occurred: %s at %04X\n.\n", gb_err, gb_err_str[gb_err], addr);
 //	abort();
 #endif
 }
@@ -198,6 +199,9 @@ void lcd_draw_line(struct gb_s *gb, const uint8_t pixels[LCD_WIDTH],
 }
 
 void rom_file_selector(void);
+void load_rom(const char *path);
+void load_ram(const char *path);
+void save_data(void);
 
 int main() { // uses core 0 to sub core
   // log init
@@ -477,11 +481,14 @@ void core1_entry() { // uses core 1 to main core
     /* Automatically assign a colour palette to the game */
     char rom_title[16];
     auto_assign_palette(palette, gb_colour_hash(&gb),gb_get_rom_name(&gb,rom_title));
-
+    //get_colour_palette(palette, 0xFF, 0xFF);
+  
     gb_init_lcd(&gb, &lcd_draw_line);
     uint_fast32_t frames = 0;
-    gb.direct.frame_skip = true;
-    gb.direct.interlace = true;
+    if(scaling_2x) {
+      gb.direct.frame_skip = true;
+      gb.direct.interlace = true;
+    }
 
     while(1)
     {
@@ -522,17 +529,24 @@ void core1_entry() { // uses core 1 to main core
       // scaling
       if(Gamepad.is_btn_pressed(BTN_S2_CENTER)) {
         scaling_2x = !scaling_2x;
+        gb.direct.frame_skip = scaling_2x;
+        gb.direct.interlace = scaling_2x;
         sleep_ms(100);
         Graphic.fill_rect(80, 16, LCD_WIDTH*2, LCD_HEIGHT*2, LCD_BLACK);
       }
       // capture
       if(Gamepad.is_btn_pressed(BTN_SUB1)) {
-
+        sleep_ms(100);
+        Graphic.setCursor(0,0);
+        Graphic.printf("not captured :P ");
       }
       // save & exit
       if(Gamepad.is_btn_pressed(BTN_SUB2)) {
-
         sleep_ms(100);
+        Graphic.setCursor(0,0);
+        Graphic.printf("saving data...");
+        save_data();
+        Graphic.print("ok");
         break;
       }
     }
@@ -549,23 +563,6 @@ static int global_printer_wrapper(const char* format, ...) {
   
   va_end(args);
   return result;
-}
-
-void display_cat(const char *path) {
-    FIL fil;
-    FRESULT fr = f_open(&fil, path, FA_READ);
-    if (FR_OK != fr) {
-      Graphic.printf("f_open error: %s (%d)\n", FRESULT_str(fr), fr);
-      return;
-    }
-    char buf[256];
-    while (f_gets(buf, sizeof buf, &fil)) {
-      Graphic.printf("%s", buf);
-    }
-    if f_error(&fil)
-      Graphic.printf("f_gets error\n");
-    fr = f_close(&fil);
-    if (FR_OK != fr) Graphic.printf("f_close error: %s (%d)\n", FRESULT_str(fr), fr);
 }
 
 void load_rom(const char *path) {
@@ -604,6 +601,42 @@ void load_rom(const char *path) {
   }
 }
 
+void load_ram(const char *path) {
+  FIL fil;
+  FRESULT fr = f_open(&fil, path, FA_READ);
+  if (FR_OK != fr) {
+    Graphic.printf("f_open error: %s (%d)\n", FRESULT_str(fr), fr);
+    return;
+  }
+
+  uint8_t buf[256];
+  UINT bytes_read;
+  size_t pos = 0;
+
+  while (1) {
+    fr = f_read(&fil, buf, sizeof buf, &bytes_read);
+    if (FR_OK != fr) {
+      Graphic.printf("f_read error: %s (%d)\n", FRESULT_str(fr), fr);
+      break;
+    }
+
+    if (bytes_read == 0) {
+      break;
+    }
+
+    memcpy(&ram[pos], buf, bytes_read);
+    pos += bytes_read;
+    if(pos > CARTRIDGE_RAM_SIZE) {
+      break;
+    }
+  }
+
+  fr = f_close(&fil);
+  if (FR_OK != fr) {
+    Graphic.printf("f_close error: %s (%d)\n", FRESULT_str(fr), fr);
+  }
+}
+
 void ls_cursor(const char *dir, int cursor, char* cursor_path, uint8_t* cursor_type) {
     char cwdbuf[FF_LFN_BUF] = {0};
     FRESULT fr; /* Return value */
@@ -618,11 +651,11 @@ void ls_cursor(const char *dir, int cursor, char* cursor_path, uint8_t* cursor_t
         }
         p_dir = cwdbuf;
     }
-    printf("Directory Listing: %s\n", p_dir);
+    LOGI("Directory Listing: %s\n", p_dir);
     DIR dj = {};      /* Directory object */
     FILINFO fno = {}; /* File information */
     assert(p_dir);
-    fr = f_findfirst(&dj, &fno, p_dir, "*");
+    fr = f_findfirst(&dj, &fno, p_dir, "*.gb");
     if (FR_OK != fr) {
         Graphic.printf("f_findfirst error: %s (%d)\n", FRESULT_str(fr), fr);
         return;
@@ -670,6 +703,7 @@ void ls_cursor(const char *dir, int cursor, char* cursor_path, uint8_t* cursor_t
 
 char rom_path[512] = "";
 char rom_name[512] = "";
+char ram_name[512] = "";
 
 void rom_file_selector(void) {
   Graphic.setTextSize(2);
@@ -735,8 +769,27 @@ void rom_file_selector(void) {
         FRESULT fr = f_getcwd(path, 512);
         if (FR_OK == fr) {
           if(file_reading) {
-            Graphic.print("Loading ROM...");
-            load_rom(cursor_path);
+            memset(rom_bank0, 0x00, ROM_BANK0_SIZE);
+            memset(ram, 0x00, CARTRIDGE_RAM_SIZE);
+
+            // get rom file name
+            strncpy(rom_name, cursor_path, 512);
+            Graphic.printf("Loading ROM '%s'...", rom_name);
+            load_rom(rom_name);
+            Graphic.print("ok\n");
+
+            // get save file name
+            strncpy(ram_name, rom_name, 512);
+            char *dot = strrchr(ram_name, '.');
+            if (dot) {
+              dot[1] = 's';
+              dot[2] = 'a';
+              dot[3] = 'v';
+              dot[4] = '\0';
+            }
+            Graphic.printf("Loading data '%s'...", ram_name);
+            load_ram(ram_name);
+            Graphic.print("ok\n");
             Graphic.set_font(G_FONT_5X8);
             return;
           } else {
@@ -782,6 +835,43 @@ void rom_file_selector(void) {
       if(cursor < 128) cursor++;
       need_display_update = true;
     }
+  }
+}
+
+void save_data(void) {
+  FIL fil;
+  FRESULT fr = f_open(&fil, ram_name, FA_WRITE | FA_CREATE_ALWAYS);
+  if (FR_OK != fr) {
+    Graphic.printf("f_open error: %s (%d)\n", FRESULT_str(fr), fr);
+    return;
+  }
+
+  uint8_t buf[256];
+  UINT bytes_write;
+  size_t pos = 0;
+
+  while (1) {
+    memcpy(buf, &ram[pos], 256);
+
+    fr = f_write(&fil, buf, sizeof buf, &bytes_write);
+    if (FR_OK != fr) {
+      Graphic.printf("f_write error: %s (%d)\n", FRESULT_str(fr), fr);
+      break;
+    }
+
+    if (bytes_write == 0) {
+      break;
+    }
+
+    pos += bytes_write;
+    if(pos > CARTRIDGE_RAM_SIZE) {
+      break;
+    }
+  }
+
+  fr = f_close(&fil);
+  if (FR_OK != fr) {
+    Graphic.printf("f_close error: %s (%d)\n", FRESULT_str(fr), fr);
   }
 }
 

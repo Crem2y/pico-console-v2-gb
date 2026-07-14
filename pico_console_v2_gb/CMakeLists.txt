@@ -43,6 +43,7 @@ add_executable(${PROJECT_NAME}
   src/v2_gb.cpp
   src/hw_config.c
   src/gb_apu.cpp
+  src/capture.cpp
 )
 
 add_subdirectory(common)

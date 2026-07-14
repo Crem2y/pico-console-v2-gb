@@ -44,3 +44,4 @@
 #include "gb_apu.hpp"
 #include "gbcolors.h"
 #include "peanut_gb.h"
+#include "capture.hpp"

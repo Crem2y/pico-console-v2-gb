@@ -97,7 +97,7 @@ union core_cmd {
 static uint8_t pixels_buffer[LCD_WIDTH];
 #define ROM_BANK0_SIZE (1 * 1024 * 1024)
 //static unsigned char rom_bank0[ROM_BANK0_SIZE];
-unsigned char* rom_bank0 = (unsigned char*)PSRAM_BASE + (1 * 1024 * 1024);
+unsigned char* rom_bank0 = (unsigned char*)PSRAM_BASE + (512 * 1024);
 
 #define CARTRIDGE_RAM_SIZE (32768)
 static uint8_t ram[CARTRIDGE_RAM_SIZE];
@@ -106,6 +106,7 @@ static palette_t palette;	// Colour palette
 static uint8_t manual_palette_selected=0;
 
 bool scaling_2x = true;
+uint16_t* capture_buffer = (uint16_t*)PSRAM_BASE + ((512+1024) * 1024);
 
 /**
  * Returns a byte from the ROM file at the given address.
@@ -153,9 +154,8 @@ void gb_error(struct gb_s *gb, const enum gb_error_e gb_err, const uint16_t addr
 
 void core0_lcd_draw_line(const uint_fast8_t line)
 {
+  static uint16_t fb[LCD_WIDTH*2];
   if(scaling_2x) {
-    static uint16_t fb[LCD_WIDTH*2];
-
     for(unsigned int x = 0; x < LCD_WIDTH; x++)
     {
       fb[x*2] = palette[(pixels_buffer[x] & LCD_PALETTE_ALL) >> 4]
@@ -166,8 +166,6 @@ void core0_lcd_draw_line(const uint_fast8_t line)
     Graphic.draw_picture(80, 16+(line*2),   LCD_WIDTH*2, 1, fb);
     Graphic.draw_picture(80, 16+(line*2)+1, LCD_WIDTH*2, 1, fb);
   } else {
-    static uint16_t fb[LCD_WIDTH];
-
     for(unsigned int x = 0; x < LCD_WIDTH; x++)
     {
       fb[x] = palette[(pixels_buffer[x] & LCD_PALETTE_ALL) >> 4]
@@ -189,6 +187,12 @@ void lcd_draw_line(struct gb_s *gb, const uint8_t pixels[LCD_WIDTH],
     tight_loop_contents();
 
   memcpy(pixels_buffer, pixels, LCD_WIDTH);
+
+  for(unsigned int x = 0; x < LCD_WIDTH; x++)
+  {
+    capture_buffer[(LCD_WIDTH * line) + x] = palette[(pixels_buffer[x] & LCD_PALETTE_ALL) >> 4]
+        [pixels_buffer[x] & 3];
+  }
 
   /* Populate command. */
   cmd.cmd = CORE_CMD_LCD_LINE;
@@ -536,9 +540,9 @@ void core1_entry() { // uses core 1 to main core
       }
       // capture
       if(Gamepad.is_btn_pressed(BTN_SUB1)) {
-        sleep_ms(100);
+        save_rgb565_bmp("capture.bmp", capture_buffer, LCD_WIDTH, LCD_HEIGHT);
         Graphic.setCursor(0,0);
-        Graphic.printf("not captured :P ");
+        Graphic.printf("captured!");
       }
       // save & exit
       if(Gamepad.is_btn_pressed(BTN_SUB2)) {

@@ -1,9 +1,9 @@
+#include <math.h>
+#include <stdint.h>
+#include <string.h>
+
 #include "gb_apu.hpp"
 #include "audio_system.hpp"
-
-#include <cmath>
-#include <cstdint>
-#include <cstring>
 
 extern audioSystem Audio;
 
@@ -60,14 +60,14 @@ static float gb_pulse_frequency(uint16_t raw_freq) {
   raw_freq &= 0x07FF;
 
   return 131072.0f /
-         static_cast<float>(2048U - raw_freq);
+         (float)(2048U - raw_freq);
 }
 
 static float gb_wave_frequency(uint16_t raw_freq) {
   raw_freq &= 0x07FF;
 
   return 65536.0f /
-         static_cast<float>(2048U - raw_freq);
+         (float)(2048U - raw_freq);
 }
 
 static float gb_noise_frequency(uint8_t nr43) {
@@ -87,12 +87,12 @@ static float gb_noise_frequency(uint8_t nr43) {
 
   return 262144.0f /
          divisor_table[divisor_code] /
-         static_cast<float>(1UL << clock_shift);
+         (float)(1UL << clock_shift);
 }
 
 static uint8_t gb_volume_to_u8(uint8_t volume) {
-  return static_cast<uint8_t>(
-      static_cast<uint16_t>(volume & 0x0F) * 255U / 15U);
+  return (uint8_t)(
+      (uint16_t)(volume & 0x0F) * 255U / 15U);
 }
 
 static uint8_t gb_initial_volume(uint8_t envelope_reg) {
@@ -188,7 +188,7 @@ static uint32_t gb_length_64_us(uint8_t length_value, bool enabled) {
   }
 
   const uint32_t length_ticks =
-      64U - static_cast<uint32_t>(length_value & 0x3F);
+      64U - (uint32_t)(length_value & 0x3F);
 
   return length_ticks * 1000000UL / 256UL;
 }
@@ -199,7 +199,7 @@ static uint32_t gb_length_256_us(uint8_t length_value, bool enabled) {
   }
 
   const uint32_t length_ticks =
-      256U - static_cast<uint32_t>(length_value);
+      256U - (uint32_t)length_value;
 
   return length_ticks * 1000000UL / 256UL;
 }
@@ -232,7 +232,7 @@ static void gb_set_volume_envelope(
   }
 
   const uint32_t tick_us =
-      static_cast<uint32_t>(period) * 1000000UL / 64UL;
+      (uint32_t)period * 1000000UL / 64UL;
 
   Audio.set_env(voice_idx, tick_us, 17);
 }
@@ -261,8 +261,8 @@ static void gb_set_ch1_sweep(uint16_t raw_freq) {
   const uint16_t delta = raw_freq >> shift;
   const int32_t next_raw =
       decrease
-          ? static_cast<int32_t>(raw_freq) - static_cast<int32_t>(delta)
-          : static_cast<int32_t>(raw_freq) + static_cast<int32_t>(delta);
+          ? (int32_t)raw_freq - (int32_t)delta
+          : (int32_t)raw_freq + (int32_t)delta;
 
   /* Sweep overflow는 CH1을 끄는 조건입니다. */
   if (next_raw < 0 || next_raw > 2047) {
@@ -272,13 +272,13 @@ static void gb_set_ch1_sweep(uint16_t raw_freq) {
 
   const float current_freq = gb_pulse_frequency(raw_freq);
   const float next_freq =
-      gb_pulse_frequency(static_cast<uint16_t>(next_raw));
+      gb_pulse_frequency((uint16_t)next_raw);
 
   const float semitones_f =
       12.0f * std::log2(next_freq / current_freq);
 
   int32_t target_semitones =
-      static_cast<int32_t>(std::lround(semitones_f));
+      (int32_t)(std::lround(semitones_f));
 
   if (target_semitones == 0) {
     target_semitones = semitones_f >= 0.0f ? 1 : -1;
@@ -290,15 +290,13 @@ static void gb_set_ch1_sweep(uint16_t raw_freq) {
     target_semitones = -128;
   }
 
-  const int32_t tick_us =
-      static_cast<int32_t>(
-          static_cast<uint32_t>(period) * 1000000UL / 128UL);
+  const int32_t tick_us = (int32_t)((uint32_t)(period) * 1000000UL / 128UL);
 
   /* tick_us는 양수로 전달하여 vibrato 모드가 되지 않게 합니다. */
   Audio.set_pitch_env(
       GB_APU_CH1,
       tick_us,
-      static_cast<int8_t>(target_semitones),
+      (int8_t)target_semitones,
       1);
 }
 
@@ -314,8 +312,8 @@ static void gb_trigger_ch1(void) {
   const uint8_t nr14 = audio_reg_read(0xFF14);
 
   const uint16_t raw_freq =
-      static_cast<uint16_t>(nr13) |
-      (static_cast<uint16_t>(nr14 & 0x07) << 8);
+      (uint16_t)nr13 |
+      ((uint16_t)(nr14 & 0x07) << 8);
 
   gb_voice_state_t &state = voice_state[GB_APU_CH1];
   state.dac_enabled = gb_dac_enabled(nr12);
@@ -345,8 +343,8 @@ static void gb_trigger_ch2(void) {
   const uint8_t nr24 = audio_reg_read(0xFF19);
 
   const uint16_t raw_freq =
-      static_cast<uint16_t>(nr23) |
-      (static_cast<uint16_t>(nr24 & 0x07) << 8);
+      (uint16_t)nr23 |
+      ((uint16_t)(nr24 & 0x07) << 8);
 
   gb_voice_state_t &state = voice_state[GB_APU_CH2];
   state.dac_enabled = gb_dac_enabled(nr22);
@@ -377,8 +375,8 @@ static void gb_trigger_ch3(void) {
   const uint8_t nr34 = audio_reg_read(0xFF1E);
 
   const uint16_t raw_freq =
-      static_cast<uint16_t>(nr33) |
-      (static_cast<uint16_t>(nr34 & 0x07) << 8);
+      (uint16_t)nr33 |
+      ((uint16_t)(nr34 & 0x07) << 8);
 
   static constexpr uint8_t output_level[4] = {
     0,
@@ -451,8 +449,8 @@ static void gb_update_ch1_frequency(void) {
   }
 
   const uint16_t raw_freq =
-      static_cast<uint16_t>(audio_reg_read(0xFF13)) |
-      (static_cast<uint16_t>(audio_reg_read(0xFF14) & 0x07) << 8);
+      (uint16_t)audio_reg_read(0xFF13) |
+      ((uint16_t)(audio_reg_read(0xFF14) & 0x07) << 8);
 
   voice_state[GB_APU_CH1].freq = gb_pulse_frequency(raw_freq);
   gb_refresh_voice(GB_APU_CH1);
@@ -464,8 +462,8 @@ static void gb_update_ch2_frequency(void) {
   }
 
   const uint16_t raw_freq =
-      static_cast<uint16_t>(audio_reg_read(0xFF18)) |
-      (static_cast<uint16_t>(audio_reg_read(0xFF19) & 0x07) << 8);
+      (uint16_t)audio_reg_read(0xFF18) |
+      ((uint16_t)(audio_reg_read(0xFF19) & 0x07) << 8);
 
   voice_state[GB_APU_CH2].freq = gb_pulse_frequency(raw_freq);
   gb_refresh_voice(GB_APU_CH2);
@@ -477,8 +475,8 @@ static void gb_update_ch3_frequency(void) {
   }
 
   const uint16_t raw_freq =
-      static_cast<uint16_t>(audio_reg_read(0xFF1D)) |
-      (static_cast<uint16_t>(audio_reg_read(0xFF1E) & 0x07) << 8);
+      (uint16_t)audio_reg_read(0xFF1D) |
+      ((uint16_t)(audio_reg_read(0xFF1E) & 0x07) << 8);
 
   voice_state[GB_APU_CH3].freq = gb_wave_frequency(raw_freq);
   gb_refresh_voice(GB_APU_CH3);
@@ -522,11 +520,11 @@ static void gb_update_master_volume(void) {
   const uint8_t right_volume = nr50 & 0x07;
 
   const uint16_t mono_volume =
-      static_cast<uint16_t>(left_volume) +
-      static_cast<uint16_t>(right_volume);
+      (uint16_t)left_volume +
+      (uint16_t)right_volume;
 
   const uint8_t master_volume =
-      static_cast<uint8_t>(mono_volume * 255U / 14U);
+      (uint8_t)(mono_volume * 255U / 14U);
 
   Audio.set_master_config(master_volume / 8U);
 }
@@ -552,12 +550,14 @@ static void gb_update_master_enable(void) {
 /* -------------------------------------------------------------------------- */
 
 void audio_init(void) {
-  std::memset(apu_mmio, 0, sizeof(apu_mmio));
-  std::memset(voice_state, 0, sizeof(voice_state));
+  memset(apu_mmio, 0, sizeof(apu_mmio));
+  memset(voice_state, 0, sizeof(voice_state));
 
   Audio.set_wave(GB_APU_CH1, WAVE_SQUARE_12);
   Audio.set_wave(GB_APU_CH2, WAVE_SQUARE_12);
   Audio.set_wave(GB_APU_CH3, WAVE_CUSTOM_32);
+  uint8_t temp[16] = {0,};
+  Audio.send_bridge_wave_data_32s(temp);
   Audio.set_wave(GB_APU_CH4, WAVE_NOISE);
 
   Audio.set_master_config(16);

@@ -3,6 +3,8 @@
 #include "v2_gb.hpp"
 #include "v2_hw_def.h"
 
+#define ENABLE_CAPTURE 0
+
 // hw lib init
 ledStatus Led = ledStatus(PIN_LED_WL_1, PIN_LED_WL_2, PIN_LED_WL_3, PIN_LED_WL_4);
 ili9488_40 Lcd = ili9488_40(PIN_DP_MOSI, PIN_DP_SCK, PIN_DP_CS, PIN_DP_DC, PIN_DP_RST, PIN_DP_BL);
@@ -106,7 +108,9 @@ static palette_t palette;	// Colour palette
 static uint8_t manual_palette_selected=0;
 
 bool scaling_2x = true;
-uint16_t* capture_buffer = (uint16_t*)PSRAM_BASE + ((512+1024) * 1024);
+#if ENABLE_CAPTURE
+uint16_t* capture_buffer = (uint16_t*)PSRAM_BASE + (512 * 1024) + ROM_BANK0_SIZE;
+#endif
 
 /**
  * Returns a byte from the ROM file at the given address.
@@ -188,11 +192,13 @@ void lcd_draw_line(struct gb_s *gb, const uint8_t pixels[LCD_WIDTH],
 
   memcpy(pixels_buffer, pixels, LCD_WIDTH);
 
+#if ENABLE_CAPTURE
   for(unsigned int x = 0; x < LCD_WIDTH; x++)
   {
     capture_buffer[(LCD_WIDTH * line) + x] = palette[(pixels_buffer[x] & LCD_PALETTE_ALL) >> 4]
         [pixels_buffer[x] & 3];
   }
+#endif
 
   /* Populate command. */
   cmd.cmd = CORE_CMD_LCD_LINE;
@@ -484,8 +490,13 @@ void core1_entry() { // uses core 1 to main core
 
     /* Automatically assign a colour palette to the game */
     char rom_title[16];
-    auto_assign_palette(palette, gb_colour_hash(&gb),gb_get_rom_name(&gb,rom_title));
-    //get_colour_palette(palette, 0xFF, 0xFF);
+    if(Gamepad.is_btn_pressed(BTN_START)) {
+      get_colour_palette(palette, 0xFF, 0xFF);
+    } else if(Gamepad.is_btn_pressed(BTN_SELECT)) {
+      get_colour_palette(palette, 0x12, 0x00);
+    } else {
+      auto_assign_palette(palette, gb_colour_hash(&gb),gb_get_rom_name(&gb,rom_title));
+    }
   
     gb_init_lcd(&gb, &lcd_draw_line);
     uint_fast32_t frames = 0;
@@ -538,12 +549,14 @@ void core1_entry() { // uses core 1 to main core
         sleep_ms(100);
         Graphic.fill_rect(80, 16, LCD_WIDTH*2, LCD_HEIGHT*2, LCD_BLACK);
       }
+#if ENABLE_CAPTURE
       // capture
       if(Gamepad.is_btn_pressed(BTN_SUB1)) {
         save_rgb565_bmp("capture.bmp", capture_buffer, LCD_WIDTH, LCD_HEIGHT);
         Graphic.setCursor(0,0);
         Graphic.printf("captured!");
       }
+#endif
       // save & exit
       if(Gamepad.is_btn_pressed(BTN_SUB2)) {
         sleep_ms(100);

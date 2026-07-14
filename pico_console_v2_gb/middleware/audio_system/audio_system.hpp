@@ -27,6 +27,7 @@ typedef enum {
   WAVE_SAWTOOTH,
   WAVE_NOISE,
   WAVE_SINE,
+  WAVE_CUSTOM_32,
 } wave_t;
 
 class audioSystem {
@@ -56,6 +57,9 @@ class audioSystem {
     void set_pitch_env(uint8_t ch, int32_t tick_us, int8_t target_semitones, uint8_t step) {
       send_bridge_set_pitch_env(ch, tick_us, target_semitones, step);
     }
+    void set_wave_data_32s(const uint8_t* wav_data) {
+      send_bridge_wave_data_32s(wav_data);
+    }
     void set_master_config(uint8_t volume) {
       send_bridge_set_master(volume);
     }
@@ -64,6 +68,7 @@ class audioSystem {
     void send_bridge_set_wave(uint8_t ch, wave_t w);
     void send_bridge_set_env(uint8_t ch, uint32_t tick_us, uint8_t step);
     void send_bridge_set_pitch_env(uint8_t ch, int32_t tick_us, int8_t target_semitones, uint8_t step);
+    void send_bridge_wave_data_32s(const uint8_t* wav_data);
     void send_bridge_set_master(uint8_t volume);
 
   private:

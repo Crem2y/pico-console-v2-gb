@@ -104,6 +104,15 @@ void audioSystem::send_bridge_set_pitch_env(uint8_t ch, int32_t tick_us, int8_t 
   Bridge.send(CMD_AUDIO_SET_PIT_ENV, payload_size, payload_buf);
 }
 
+void audioSystem::send_bridge_wave_data_32s(const uint8_t* wav_data) {
+  int payload_size = 16;
+  uint8_t payload_buf[PAYLOAD_MAX_SIZE];
+
+  memcpy(payload_buf, &wav_data, 16);
+
+  Bridge.send(CMD_AUDIO_WAVE_DATA32, payload_size, payload_buf);
+}
+
 void audioSystem::send_bridge_set_master(uint8_t volume) {
   int payload_size = 1;
   uint8_t payload_buf[PAYLOAD_MAX_SIZE];

@@ -557,7 +557,7 @@ void audio_init(void) {
 
   Audio.set_wave(GB_APU_CH1, WAVE_SQUARE_12);
   Audio.set_wave(GB_APU_CH2, WAVE_SQUARE_12);
-  Audio.set_wave(GB_APU_CH3, WAVE_TRIANGLE);
+  Audio.set_wave(GB_APU_CH3, WAVE_CUSTOM_32);
   Audio.set_wave(GB_APU_CH4, WAVE_NOISE);
 
   Audio.set_master_config(16);
@@ -678,6 +678,25 @@ void audio_write(const uint16_t addr, const uint8_t val) {
 
     case 0xFF26:
       gb_update_master_enable();
+      break;
+
+    case 0xFF30:
+    case 0xFF31:
+    case 0xFF32:
+    case 0xFF33:
+    case 0xFF34:
+    case 0xFF35:
+    case 0xFF36:
+    case 0xFF37:
+    case 0xFF38:
+    case 0xFF39:
+    case 0xFF3A:
+    case 0xFF3B:
+    case 0xFF3C:
+    case 0xFF3D:
+    case 0xFF3E:
+    case 0xFF3F:
+      Audio.send_bridge_wave_data_32s(&apu_mmio[0xFF30 - APU_ADDR_BASE]);
       break;
 
     default:

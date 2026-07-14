@@ -24,6 +24,7 @@ typedef enum {
   WAVE_SAWTOOTH,
   WAVE_NOISE,
   WAVE_SINE,
+  WAVE_CUSTOM_0,
 } wave_t;
 
 typedef struct {
@@ -69,6 +70,7 @@ void voice_note_on(int voice_idx, float freq, int32_t peak_vol_q8);
 void voice_vol_env_set(int voice_idx, uint32_t tick_us, int32_t decay_step_q8);
 void voice_pitch_env_set(int voice_idx, int32_t tick_us, int32_t target_semitones, int32_t step);
 void set_voice_waveform(int voice_idx, wave_t w);
+void set_custom_wave(const int16_t* wave_data);
 void set_master_volume(uint8_t vol);
 void set_mute(bool mute);
 

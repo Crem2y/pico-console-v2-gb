@@ -18,6 +18,7 @@ static int16_t triangle_wave_table[WAVE_TABLE_LEN];
 static int16_t sawtooth_wave_table[WAVE_TABLE_LEN];
 static int16_t noise_wave_table[WAVE_TABLE_LEN];
 static int16_t sine_wave_table[WAVE_TABLE_LEN];
+static int16_t custom0_wave_table[WAVE_TABLE_LEN];
 
 static int _data_pin;
 static int _clock_pin_base;
@@ -52,6 +53,7 @@ static void make_wave_tables(void) {
         sawtooth_wave_table[i] = (int16_t)((( (WAVE_TABLE_LEN - i) * 65535) / WAVE_TABLE_LEN) - 32768);
         noise_wave_table[i] = (xorshift32(&rng) & 1) ? 32767 : -32768;
         sine_wave_table[i] = (int16_t)(32767.0f * cosf((float)i * 2.0f * (float)(M_PI / WAVE_TABLE_LEN)));
+        custom0_wave_table[i] = 0;
     }
 }
 
@@ -241,6 +243,7 @@ static const int16_t *wave_table_ptr(wave_t w) {
         case WAVE_SAWTOOTH:     return sawtooth_wave_table;
         case WAVE_NOISE:        return noise_wave_table;
         case WAVE_SINE:         return sine_wave_table;
+        case WAVE_CUSTOM_0:     return custom0_wave_table;
         default:                return square_50_wave_table;
     }
 }
@@ -311,6 +314,11 @@ static struct audio_buffer_pool *init_audio(void) {
 
 void set_mute(bool mute) {
     gpio_put(_mute_pin, !mute);
+}
+
+void set_custom_wave(const int16_t* wave_data) {
+    if(wave_data == NULL) return;
+    memcpy(custom0_wave_table, wave_data, (sizeof(int16_t) * WAVE_TABLE_LEN));
 }
 
 void audio_loop(void) {

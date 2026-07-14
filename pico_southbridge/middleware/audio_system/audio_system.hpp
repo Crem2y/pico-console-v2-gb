@@ -18,6 +18,7 @@ class audioSystem {
     void recv_bridge_set_wave(const uint8_t* payload, uint8_t payload_size);
     void recv_bridge_set_env(const uint8_t* payload, uint8_t payload_size);
     void recv_bridge_set_pitch_env(const uint8_t* payload, uint8_t payload_size);
+    void recv_bridge_wave_data_32s(const uint8_t* payload, uint8_t payload_size);
     void recv_bridge_set_master(const uint8_t* payload, uint8_t payload_size);
 
   private:

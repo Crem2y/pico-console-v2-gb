@@ -26,9 +26,11 @@ typedef struct {
   // This is the peak level when a note is triggered.
   int32_t vol_q8;
 
+  int32_t vol_l_q8;
+  int32_t vol_r_q8;
+
   // Volume envelope level (Q8). Applied volume is vol_env_q8.
   // For now: simple linear decay envelope.
-  int32_t vol_env_q8;
   uint32_t vol_env_tick_us;       // how often to update env (e.g., 5000)
   uint32_t vol_env_next_us;       // next update time (time_us_32())
   int32_t vol_env_decay_step_q8;  // amount to subtract each tick (>=1)
@@ -55,10 +57,15 @@ extern voice_t g_voices[NUM_CHANNELS];
 void audio_loop(void);
 void audio_init(int data_pin, int clock_pin_base, int mute_pin);
 
+void set_voice_waveform(int voice_idx, wave_t w);
+void set_voice_freq(int voice_idx, float freq);
+void set_voice_volume_q8(int voice_idx, int32_t vol_q8);
+void set_voice_lr_volume_q8(int voice_idx, int32_t vol_l_q8, int32_t vol_r_q8);
+
 void voice_note_on(int voice_idx, float freq, int32_t peak_vol_q8);
 void voice_vol_env_set(int voice_idx, uint32_t tick_us, int32_t decay_step_q8);
 void voice_pitch_env_set(int voice_idx, int32_t tick_us, int32_t target_semitones, int32_t step);
-void set_voice_waveform(int voice_idx, wave_t w);
+
 void set_master_volume(uint8_t vol);
 void set_mute(bool mute);
 

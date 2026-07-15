@@ -395,7 +395,7 @@ static void gb_trigger_ch3(void) {
     return;
   }
 
-  Audio.set_wave(GB_APU_CH3, WAVE_TRIANGLE);
+//  Audio.set_wave(GB_APU_CH3, WAVE_TRIANGLE);
 
   const uint8_t volume = output_level[(nr32 >> 5) & 0x03];
   gb_play_voice(GB_APU_CH3, state.freq, volume);
@@ -454,7 +454,7 @@ static void gb_update_ch1_frequency(void) {
       ((uint16_t)(audio_reg_read(0xFF14) & 0x07) << 8);
 
   voice_state[GB_APU_CH1].freq = gb_pulse_frequency(raw_freq);
-  gb_refresh_voice(GB_APU_CH1);
+  //gb_refresh_voice(GB_APU_CH1);
 }
 
 static void gb_update_ch2_frequency(void) {
@@ -467,7 +467,7 @@ static void gb_update_ch2_frequency(void) {
       ((uint16_t)(audio_reg_read(0xFF19) & 0x07) << 8);
 
   voice_state[GB_APU_CH2].freq = gb_pulse_frequency(raw_freq);
-  gb_refresh_voice(GB_APU_CH2);
+  //gb_refresh_voice(GB_APU_CH2);
 }
 
 static void gb_update_ch3_frequency(void) {
@@ -480,7 +480,7 @@ static void gb_update_ch3_frequency(void) {
       ((uint16_t)(audio_reg_read(0xFF1E) & 0x07) << 8);
 
   voice_state[GB_APU_CH3].freq = gb_wave_frequency(raw_freq);
-  gb_refresh_voice(GB_APU_CH3);
+  //gb_refresh_voice(GB_APU_CH3);
 }
 
 static void gb_update_ch3_volume(void) {
@@ -506,7 +506,7 @@ static void gb_update_ch4_frequency(void) {
   voice_state[GB_APU_CH4].freq =
       gb_noise_frequency(audio_reg_read(0xFF22));
 
-  gb_refresh_voice(GB_APU_CH4);
+  //gb_refresh_voice(GB_APU_CH4);
 }
 
 
@@ -527,7 +527,7 @@ static void gb_update_master_volume(void) {
   const uint8_t master_volume =
       (uint8_t)(mono_volume * 255U / 14U);
 
-  Audio.set_master_config(master_volume / 8U);
+//  Audio.set_master_config(master_volume / 8U);
 }
 
 static void gb_update_master_enable(void) {
@@ -550,7 +550,7 @@ static void gb_update_master_enable(void) {
 /* Public interface                                                           */
 /* -------------------------------------------------------------------------- */
 
-void audio_init(void) {
+void audio_init(uint8_t default_volume = 16) {
   memset(apu_mmio, 0, sizeof(apu_mmio));
   memset(voice_state, 0, sizeof(voice_state));
   wave_ram_dirty = true;
@@ -562,7 +562,7 @@ void audio_init(void) {
   Audio.send_bridge_wave_data_32s(temp);
   Audio.set_wave(GB_APU_CH4, WAVE_NOISE);
 
-  Audio.set_master_config(16);
+  Audio.set_master_config(default_volume);
   Audio.set_enable(false);
 }
 

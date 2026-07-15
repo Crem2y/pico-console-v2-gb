@@ -48,6 +48,8 @@ time_ms_t temperature_timer;
 time_ms_t audio_timer;
 time_ms_t sd_timer;
 
+time_ms_t btn_check_timer;
+
 inline int pio_uart_readable_wrapper(void) {
   return pio_uart_rx_readable(&pio_rx);
 }
@@ -111,6 +113,8 @@ bool scaling_2x = true;
 #if ENABLE_CAPTURE
 uint16_t* capture_buffer = (uint16_t*)PSRAM_BASE + (512 * 1024) + ROM_BANK0_SIZE;
 #endif
+
+uint8_t volume = 16;
 
 /**
  * Returns a byte from the ROM file at the given address.
@@ -462,11 +466,11 @@ void core1_entry() { // uses core 1 to main core
     Graphic.fillScreen(LCD_BLACK);
 
     if(!boot_sound) {
-      audio_init();
+      audio_init(volume);
     }
     rom_file_selector();
     if(boot_sound) {
-      audio_init();
+      audio_init(volume);
       boot_sound = false;
     }
 
@@ -527,44 +531,64 @@ void core1_entry() { // uses core 1 to main core
       gb.direct.joypad_bits.select  = !Gamepad.is_btn_pressed(BTN_SELECT);
       gb.direct.joypad_bits.start   = !Gamepad.is_btn_pressed(BTN_START);
 
-      // set frame skip
-      if(Gamepad.is_btn_pressed(BTN_S1_CENTER) && Gamepad.is_btn_pressed(BTN_ZL)) {
-        gb.direct.frame_skip = !gb.direct.frame_skip;
-        sleep_ms(100);
-        Graphic.setCursor(0,0);
-        Graphic.printf("frame_skip : %s", gb.direct.frame_skip ? "yes" : "no ");
-      }
-      // set interlace
-      if(Gamepad.is_btn_pressed(BTN_S1_CENTER) && Gamepad.is_btn_pressed(BTN_ZR)) {
-        gb.direct.interlace = !gb.direct.interlace;
-        sleep_ms(100);
-        Graphic.setCursor(0,0);
-        Graphic.printf("interlace  : %s", gb.direct.interlace ? "yes" : "no ");
-      }
-      // scaling
-      if(Gamepad.is_btn_pressed(BTN_S2_CENTER)) {
-        scaling_2x = !scaling_2x;
-        gb.direct.frame_skip = scaling_2x;
-        gb.direct.interlace = scaling_2x;
-        sleep_ms(100);
-        Graphic.fill_rect(80, 16, LCD_WIDTH*2, LCD_HEIGHT*2, LCD_BLACK);
-      }
+      time_ms_t now_time = get_system_time_ms();
+
+      if(system_time_elapsed_ms(now_time, btn_check_timer) > 100) {
+        btn_check_timer = now_time;
+        // set volume
+        if(Gamepad.is_btn_pressed(BTN_SL)) {
+          if(volume > 0) volume--;
+          Audio.set_master_config(volume);
+          sleep_ms(100);
+          Graphic.setCursor(0,0);
+          Graphic.printf("volume : %2d", volume);
+        }
+        if(Gamepad.is_btn_pressed(BTN_SR)) {
+          if(volume < 15) volume++;
+          Audio.set_master_config(volume);
+          sleep_ms(100);
+          Graphic.setCursor(0,0);
+          Graphic.printf("volume : %2d", volume);
+        }
+        // set frame skip
+        if(Gamepad.is_btn_pressed(BTN_S1_CENTER) && Gamepad.is_btn_pressed(BTN_ZL)) {
+          gb.direct.frame_skip = !gb.direct.frame_skip;
+          sleep_ms(100);
+          Graphic.setCursor(0,0);
+          Graphic.printf("frame_skip : %s", gb.direct.frame_skip ? "yes" : "no ");
+        }
+        // set interlace
+        if(Gamepad.is_btn_pressed(BTN_S1_CENTER) && Gamepad.is_btn_pressed(BTN_ZR)) {
+          gb.direct.interlace = !gb.direct.interlace;
+          sleep_ms(100);
+          Graphic.setCursor(0,0);
+          Graphic.printf("interlace  : %s", gb.direct.interlace ? "yes" : "no ");
+        }
+        // scaling
+        if(Gamepad.is_btn_pressed(BTN_S2_CENTER)) {
+          scaling_2x = !scaling_2x;
+          gb.direct.frame_skip = scaling_2x;
+          gb.direct.interlace = scaling_2x;
+          sleep_ms(100);
+          Graphic.fill_rect(80, 16, LCD_WIDTH*2, LCD_HEIGHT*2, LCD_BLACK);
+        }
 #if ENABLE_CAPTURE
-      // capture
-      if(Gamepad.is_btn_pressed(BTN_SUB1)) {
-        save_rgb565_bmp("capture.bmp", capture_buffer, LCD_WIDTH, LCD_HEIGHT);
-        Graphic.setCursor(0,0);
-        Graphic.printf("captured!");
-      }
+        // capture
+        if(Gamepad.is_btn_pressed(BTN_SUB1)) {
+          save_rgb565_bmp("capture.bmp", capture_buffer, LCD_WIDTH, LCD_HEIGHT);
+          Graphic.setCursor(0,0);
+          Graphic.printf("captured!");
+        }
 #endif
-      // save & exit
-      if(Gamepad.is_btn_pressed(BTN_SUB2)) {
-        sleep_ms(100);
-        Graphic.setCursor(0,0);
-        Graphic.printf("saving data...");
-        save_data();
-        Graphic.print("ok");
-        break;
+        // save & exit
+        if(Gamepad.is_btn_pressed(BTN_SUB2)) {
+          sleep_ms(100);
+          Graphic.setCursor(0,0);
+          Graphic.printf("saving data...");
+          save_data();
+          Graphic.print("ok");
+          break;
+        }
       }
     }
 

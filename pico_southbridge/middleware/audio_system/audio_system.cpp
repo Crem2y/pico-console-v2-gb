@@ -56,7 +56,7 @@ void audioSystem::recv_bridge_wave_data_32s(const uint8_t* payload, uint8_t payl
         (int16_t)(((int32_t)sample_4bit * 65535 / 15) - 32768);
   }
 
-  set_custom_wave(temp_wave_table);
+  set_custom_wave(WAVE_CUSTOM_0, temp_wave_table);
 }
 
 void audioSystem::recv_bridge_set_master(const uint8_t* payload, uint8_t payload_size) {

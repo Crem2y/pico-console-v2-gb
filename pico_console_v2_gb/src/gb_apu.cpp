@@ -427,7 +427,11 @@ static void gb_trigger_ch4(void) {
     return;
   }
 
-  Audio.set_wave(GB_APU_CH4, WAVE_NOISE);
+  if(nr43 & 0x08) {
+    Audio.set_wave(GB_APU_CH4, WAVE_NOISE_7);
+  } else {
+    Audio.set_wave(GB_APU_CH4, WAVE_NOISE_15);
+  }
 
   const uint8_t volume = gb_initial_volume(nr42);
   gb_play_voice(GB_APU_CH4, state.freq, volume);
@@ -557,7 +561,7 @@ void audio_init(uint8_t default_volume = 16) {
 
   Audio.set_wave(GB_APU_CH1, WAVE_SQUARE_12);
   Audio.set_wave(GB_APU_CH2, WAVE_SQUARE_12);
-  Audio.set_wave(GB_APU_CH3, WAVE_CUSTOM_32);
+  Audio.set_wave(GB_APU_CH3, WAVE_CUSTOM_0);
   uint8_t temp[16] = {0,};
   Audio.send_bridge_wave_data_32s(temp);
   Audio.set_wave(GB_APU_CH4, WAVE_NOISE);
@@ -646,7 +650,7 @@ void audio_write(const uint16_t addr, const uint8_t val) {
     case 0xFF1E:
       if (val & 0x80) {
         if (wave_ram_dirty) {
-          Audio.send_bridge_wave_data_32s(&apu_mmio[0xFF30 - APU_ADDR_BASE]);
+          Audio.set_wave_data_32s(WAVE_CUSTOM_0, &apu_mmio[0xFF30 - APU_ADDR_BASE]);
           wave_ram_dirty = false;
         }
         gb_trigger_ch3();

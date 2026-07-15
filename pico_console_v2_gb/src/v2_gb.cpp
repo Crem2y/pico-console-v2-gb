@@ -105,6 +105,8 @@ unsigned char* rom_bank0 = (unsigned char*)PSRAM_BASE + (512 * 1024);
 
 #define CARTRIDGE_RAM_SIZE (32768)
 static uint8_t ram[CARTRIDGE_RAM_SIZE];
+static bool ram_written = false;
+
 static int lcd_line_busy = 0;
 static palette_t palette;	// Colour palette
 static uint8_t manual_palette_selected=0;
@@ -141,6 +143,7 @@ void gb_cart_ram_write(struct gb_s *gb, const uint_fast32_t addr,
 		       const uint8_t val)
 {
   ram[addr] = val;
+  ram_written = true;
 }
 
 /**
@@ -483,6 +486,7 @@ void core1_entry() { // uses core 1 to main core
     }
 
     /* Initialise GB context. */
+    ram_written = false;
     ret = gb_init(&gb, &gb_rom_read, &gb_cart_ram_read,
             &gb_cart_ram_write, &gb_error, NULL);
     if(ret != GB_INIT_NO_ERROR)
@@ -583,10 +587,12 @@ void core1_entry() { // uses core 1 to main core
         // save & exit
         if(Gamepad.is_btn_pressed(BTN_SUB2)) {
           sleep_ms(100);
-          Graphic.setCursor(0,0);
-          Graphic.printf("saving data...");
-          save_data();
-          Graphic.print("ok");
+          if(ram_written) {
+            Graphic.setCursor(0,0);
+            Graphic.printf("saving data...");
+            save_data();
+            Graphic.print("ok");
+          }
           break;
         }
       }
@@ -757,7 +763,6 @@ void rom_file_selector(void) {
   enum sd_status status = SD_NO_CARD;
   enum sd_status prev_status = SD_CARD_ERR;
 
-  bool displaying_info = false;
   bool need_display_update = true;
 
   char path[512] = "";
@@ -780,7 +785,6 @@ void rom_file_selector(void) {
           strcpy(path, "");
           file_reading = false;
           cursor = 0;
-          displaying_info = false;
           break;
         case SD_NOT_MOUNTED:
           Graphic.print("not mounted \n");
@@ -842,10 +846,6 @@ void rom_file_selector(void) {
       }
     }
 
-    if(Gamepad.is_btn_pressed(BTN_START)) {
-      displaying_info = !displaying_info;
-      need_display_update = true;
-    }
     if(Gamepad.is_btn_pressed(BTN_A)) {
       if(cursor_type) {
         if(cursor_type == 1) { // directory

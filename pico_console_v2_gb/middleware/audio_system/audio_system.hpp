@@ -51,7 +51,7 @@ class audioSystem {
       send_bridge_note_on(ch, freq, volume);
     }
     void stop_note(uint8_t ch) {
-      send_bridge_note_off(ch);
+      send_bridge_set_vol(ch, 0);
     }
 
     void set_freq(uint8_t ch, float freq) {

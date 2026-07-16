@@ -71,16 +71,6 @@ void audioSystem::send_bridge_note_on(uint8_t ch, float freq, uint8_t volume) {
   Bridge.send(CMD_AUDIO_NOTE_ON, payload_size, payload_buf);
 }
 
-void audioSystem::send_bridge_note_off(uint8_t ch) {
-  int payload_size = 2;
-  uint8_t payload_buf[PAYLOAD_MAX_SIZE];
-
-  payload_buf[0] = ch;
-  payload_buf[1] = 0;
-
-  Bridge.send(CMD_AUDIO_SET_VOL, payload_size, payload_buf);
-}
-
 void audioSystem::send_bridge_set_freq(uint8_t ch, float freq) {
   int payload_size = 5;
   uint8_t payload_buf[PAYLOAD_MAX_SIZE];

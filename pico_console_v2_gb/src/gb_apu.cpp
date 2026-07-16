@@ -475,7 +475,7 @@ static void gb_update_ch3_volume(void) {
   if (state.active && state.dac_enabled && gb_master_enabled()) {
     Audio.set_vol(GB_APU_CH3, state.volume);
   } else {
-    Audio.set_vol(GB_APU_CH3, 0);
+    Audio.stop_note(GB_APU_CH3);
   }
 }
 
@@ -525,7 +525,7 @@ void audio_init(uint8_t default_volume = 16) {
   Audio.set_wave_data_32s(WAVE_CUSTOM_0, temp);
 
   for (uint8_t ch = 0; ch < GB_APU_CH_COUNT; ++ch) {
-    Audio.set_vol(ch, 0);
+    Audio.stop_note(ch);
     Audio.set_mix(ch, 255, 255);
   }
 

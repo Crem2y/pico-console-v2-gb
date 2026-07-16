@@ -548,7 +548,7 @@ void core1_entry() { // uses core 1 to main core
           Graphic.printf("volume : %2d", volume);
         }
         if(Gamepad.is_btn_pressed(BTN_SR)) {
-          if(volume < 15) volume++;
+          if(volume < 32) volume++;
           Audio.set_master_config(volume);
           sleep_ms(100);
           Graphic.setCursor(0,0);

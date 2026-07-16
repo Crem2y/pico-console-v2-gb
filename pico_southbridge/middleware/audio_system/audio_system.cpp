@@ -29,7 +29,7 @@ void audioSystem::recv_bridge_set_freq(const uint8_t* payload, uint8_t payload_s
 void audioSystem::recv_bridge_set_vol(const uint8_t* payload, uint8_t payload_size) {
   if(payload_size < 2) return;
 
-  set_voice_freq(payload[0], payload[1]);
+  set_voice_volume_q8(payload[0], payload[1]);
 }
 
 void audioSystem::recv_bridge_set_wave(const uint8_t* payload, uint8_t payload_size) {

@@ -1,3 +1,14 @@
+- **Peanut-GB**, licensed under the **MIT License**.  
+  See `Peanut-GB-MIT.txt`.
+
+- **RP2040-GB**, licensed under the **MIT License**.  
+  See `RP2040-GB-MIT.txt`.
+
+- **Pico-GB**, licensed under the **MIT License**.  
+  See `Pico-GB-MIT.txt`.
+
+---
+
 - This project uses the **Raspberry Pi Pico SDK**, licensed under the **BSD 3-Clause License**.  
   See `pico-sdk-BSD-3-Clause.txt`.
 

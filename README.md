@@ -1,51 +1,39 @@
-# pico-console V2
+# Pico Console V2 GB
 
 ![Front view](doc/front.jpg)
 
-[![Build test](https://github.com/Crem2y/pico-console-v2/actions/workflows/build_test.yml/badge.svg)](https://github.com/Crem2y/pico-console-v2/actions/workflows/build_test.yml)
+[![Build test](https://github.com/Crem2y/pico-console-v2-gb/actions/workflows/build_test.yml/badge.svg)](https://github.com/Crem2y/pico-console-v2-gb/actions/workflows/build_test.yml)
 
-A custom-built handheld console platform based on a multi-MCU architecture.
+A Game Boy emulator for the Pico Console V2 platform.
 
-The system is built around two RP2350 microcontrollers:
-one acting as the main processor and the other as a dedicated southbridge.
-
-This project focuses on scalable embedded system design, including multi-processor coordination, custom protocols, and full-stack bare-metal development.
-
-For the previous version of this project, see [pico-console](https://github.com/Crem2y/pico-console).
+Audio is handled by an external RP2350-based Link-APU over a custom communication protocol.
 
 ## Features
 
-- Architecture:
-    - Main CPU: RP2350A (at [rp2350a_main_board](https://github.com/Crem2y/rp2350a_main_board))
-    - Southbridge: RP2350B (at [pico-console-v2-pcb](https://github.com/Crem2y/pico-console-v2-pcb). handles input, peripherals, and auxiliary I/O)
-    - Custom inter-MCU communication (based on UART)
+- microSD ROM loading
+- Save RAM (`.sav`) support
+- PSRAM-backed ROM storage
+- 2x display scaling
+- External Link-APU audio processing
+- Hardware gamepad input
+- Built-in ROM file browser
 
-- Graphics:
-    - 480x320 18-bit LCD (50MHz SPI protocol over HSTX)
+### Controls
 
-- Audio:
-    - Software mixing pipeline (multi-channel)
-
-- Input:
-    - 16 buttons (Nintendo-style ABXY layout)
-    - 2 joysticks
-    - Touchscreen
-    - 6-axis IMU
-
-- Storage:
-    - microSD ([carlk3/no-OS-FatFS-SD-SDIO-SPI-RPi-Pico](https://github.com/carlk3/no-OS-FatFS-SD-SDIO-SPI-RPi-Pico))
-
-- Other:
-    - Temperture monitoring
-    - Battery monitoring
-    - IR communication (RAW, NEC)
-    - Designed for extensibility (at southbridge)
-        - Qwiic/STEMMA QT Compatible connector
-        - HSTX connector (0.5mm pitch 10pin FPC connector)
-        - and some GPIO pads..
-    - USB HID (Powered by TinyUSB)
-
-This project focuses on exploring scalable embedded system design, including multi-processor coordination, custom protocols, and full-stack bare-metal development.
+| Action              | Joypad              |
+|---------------------|---------------------|
+| A or select file    | A                   |
+| B                   | B                   |
+| Start               | START               |
+| Select              | SELECT              |
+| D-Pad               | Left Stick or D-Pad |
+| Volume Up           | R                   |
+| Volume Down         | L                   |
+| 2x Scaling (toggle) | RS                  |
+| Frame Skip (Toggle) | LS + ZL             |
+| Interlace (Toggle)  | LS + ZR             |
+| Capture BMP         | SUB1                |
+| Save & Exit         | SUB2                |
 
 ## How to build & upload firmware
 
@@ -55,7 +43,7 @@ sudo apt install cmake python3 build-essential gcc-arm-none-eabi libnewlib-arm-n
 ```
 2. Clone this repository with submodules:
 ```bash
-git clone --recurse-submodules https://github.com/Crem2y/pico-console-v2.git
+git clone --recurse-submodules https://github.com/Crem2y/pico-console-v2-gb.git
 ```
 3. Launch the build script:
 ```bash
@@ -87,6 +75,20 @@ git clone --recurse-submodules https://github.com/Crem2y/pico-console-v2.git
 - See [LICENSE](./LICENSE) for details.
 
 ---
+
+### Credits
+
+This project is derived from Pico-GB, which itself is based on RP2040-GB and Peanut-GB.
+
+```
+Peanut-GB
+    ↓
+RP2040-GB
+    ↓
+Pico-GB
+    ↓
+Pico Console V2 GB
+```
 
 ### Third-party components
 - Thank you to the many open-source contributors.

@@ -40,10 +40,6 @@ FRESULT save_rgb565_bmp(
     FRESULT fr;
     UINT written;
 
-    /*
-     * BMP의 각 행은 4바이트 경계로 정렬됩니다.
-     * RGB888은 픽셀당 3바이트입니다.
-     */
     uint32_t raw_row_size = width * 3;
     uint32_t row_size = (raw_row_size + 3) & ~3U;
     uint32_t padding_size = row_size - raw_row_size;
@@ -68,7 +64,7 @@ FRESULT save_rgb565_bmp(
         .bits_per_pixel    = 24,
         .compression       = 0,  // BI_RGB
         .image_size        = image_size,
-        .x_pixels_per_m    = 2835, // 약 72 DPI
+        .x_pixels_per_m    = 2835, // about 72 DPI
         .y_pixels_per_m    = 2835,
         .colors_used       = 0,
         .important_colors  = 0,
@@ -103,10 +99,6 @@ FRESULT save_rgb565_bmp(
 
     uint8_t padding[3] = {0, 0, 0};
 
-    /*
-     * LCD_WIDTH가 컴파일 타임 상수라면 정적 버퍼로 둘 수 있습니다.
-     * 480픽셀 기준 1440바이트입니다.
-     */
     //static uint8_t row_buffer[LCD_WIDTH * 3];
     static uint8_t row_buffer[160 * 3];
 
@@ -120,17 +112,10 @@ FRESULT save_rgb565_bmp(
             uint8_t g6 = (rgb565 >> 5)  & 0x3F;
             uint8_t b5 = rgb565         & 0x1F;
 
-            /*
-             * 단순 시프트보다 비트 복제를 사용하면
-             * 0~255 범위를 더 정확히 채울 수 있습니다.
-             */
             uint8_t r8 = (r5 << 3) | (r5 >> 2);
             uint8_t g8 = (g6 << 2) | (g6 >> 4);
             uint8_t b8 = (b5 << 3) | (b5 >> 2);
 
-            /*
-             * BMP의 24비트 픽셀 순서는 RGB가 아니라 BGR입니다.
-             */
             row_buffer[x * 3 + 0] = b8;
             row_buffer[x * 3 + 1] = g8;
             row_buffer[x * 3 + 2] = r8;

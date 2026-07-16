@@ -164,11 +164,6 @@ static uint32_t gb_length_256_us(uint8_t length_value, bool enabled) {
   return length_ticks * 1000000UL / 256UL;
 }
 
-/*
- * 현재 API는 감소 envelope만 표현할 수 있습니다.
- * 또한 volume envelope와 length counter를 동시에 예약할 수 없으므로,
- * length가 켜져 있으면 채널 종료를 우선합니다.
- */
 static void gb_set_volume_envelope(
     uint8_t ch,
     uint8_t envelope_reg,
@@ -255,10 +250,6 @@ static void gb_update_channel_mix(uint8_t ch) {
   const uint8_t nr50 = audio_reg_read(0xFF24);
   const uint8_t nr51 = audio_reg_read(0xFF25);
 
-  /*
-   * NR50의 0~7은 실제로 1/8~8/8 단계이므로 +1로 변환합니다.
-   * set_mix(255, 255)는 추가 감쇠가 없는 상태입니다.
-   */
   const uint8_t left_level = (uint8_t)(((nr50 >> 4) & 0x07) + 1U);
   const uint8_t right_level = (uint8_t)((nr50 & 0x07) + 1U);
 
@@ -539,7 +530,6 @@ void audio_write(const uint16_t addr, const uint8_t val) {
     return;
   }
 
-  /* NR52는 bit 7만 저장합니다. */
   if (addr == 0xFF26) {
     audio_reg(addr) = val & 0x80;
   } else {

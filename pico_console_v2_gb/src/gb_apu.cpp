@@ -345,7 +345,6 @@ static void gb_trigger_ch2(void) {
       gb_length_64_us(nr21, (nr24 & 0x40) != 0);
 
   gb_set_volume_envelope(GB_APU_CH2, nr22, length_us);
-  Audio.set_pitch_env(GB_APU_CH2, 0, 0, 0);
 }
 
 static void gb_trigger_ch3(void) {
@@ -360,6 +359,7 @@ static void gb_trigger_ch3(void) {
       ((uint16_t)(nr34 & 0x07) << 8);
 
   static constexpr uint8_t output_level[4] = {
+    // 0%, 100%, 50%, 25%
     0, 255, 127, 63,
   };
 
@@ -383,8 +383,6 @@ static void gb_trigger_ch3(void) {
   } else {
     Audio.set_vol_env(GB_APU_CH3, 0, 0);
   }
-
-  Audio.set_pitch_env(GB_APU_CH3, 0, 0, 0);
 }
 
 static void gb_trigger_ch4(void) {
@@ -415,7 +413,6 @@ static void gb_trigger_ch4(void) {
       gb_length_64_us(nr41, (nr44 & 0x40) != 0);
 
   gb_set_volume_envelope(GB_APU_CH4, nr42, length_us);
-  Audio.set_pitch_env(GB_APU_CH4, 0, 0, 0);
 }
 
 /* -------------------------------------------------------------------------- */
@@ -466,6 +463,7 @@ static void gb_update_ch3_frequency(void) {
 
 static void gb_update_ch3_volume(void) {
   static constexpr uint8_t output_level[4] = {
+    // 0%, 100%, 50%, 25%
     0, 255, 127, 63,
   };
 
@@ -528,6 +526,10 @@ void audio_init(uint8_t default_volume = 16) {
     Audio.stop_note(ch);
     Audio.set_mix(ch, 255, 255);
   }
+
+  Audio.set_pitch_env(GB_APU_CH2, 0, 0, 0);
+  Audio.set_pitch_env(GB_APU_CH3, 0, 0, 0);
+  Audio.set_pitch_env(GB_APU_CH4, 0, 0, 0);
 
   Audio.set_master_config(default_volume);
 }

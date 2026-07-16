@@ -192,7 +192,7 @@ void bridge_do_cmd(const bridge_msg_t* msg) {
     Audio.recv_bridge_set_wave(msg->payload, msg->payload_size);
     break;
   case CMD_AUDIO_SET_MIX:
-    Audio.recv_bridge_set_wave(msg->payload, msg->payload_size);
+    Audio.recv_bridge_set_mix(msg->payload, msg->payload_size);
     break;
   case CMD_AUDIO_SET_VOL_ENV:
     Audio.recv_bridge_set_vol_env(msg->payload, msg->payload_size);

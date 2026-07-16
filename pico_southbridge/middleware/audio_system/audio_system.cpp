@@ -38,7 +38,7 @@ void audioSystem::recv_bridge_set_wave(const uint8_t* payload, uint8_t payload_s
   set_voice_waveform(payload[0], (wave_t)payload[1]);
 }
 
-void recv_bridge_set_mix(const uint8_t* payload, uint8_t payload_size) {
+void audioSystem::recv_bridge_set_mix(const uint8_t* payload, uint8_t payload_size) {
   if(payload_size < 3) return;
 
   set_voice_lr_volume_q8(payload[0], payload[1], payload[2]);

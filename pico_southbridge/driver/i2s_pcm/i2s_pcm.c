@@ -112,7 +112,7 @@ static inline bool voice_pitch_env_move_toward(voice_t *v, int32_t target) {
 
 static inline void voice_env_tick(voice_t *v, uint32_t now_us) {
     // Simple linear decay: vol_env_q8 -= vol_env_decay_step_q8 every vol_env_tick_us
-    if (v->vol_q8 > 0 && v->vol_env_decay_step_q8 > 0) {
+    if (v->vol_q8 > 0 && v->vol_env_tick_us > 0 && v->vol_env_decay_step_q8 > 0) {
         // Catch up if we missed ticks (avoid depending on main loop cadence)
         while ((int32_t)(now_us - v->vol_env_next_us) >= 0) {
             v->vol_q8 -= v->vol_env_decay_step_q8;
@@ -171,10 +171,10 @@ static void render_buffer_mono_mix(int16_t *dst, uint32_t count) {
         voice_env_tick(&g_voices[v], now_us);
     }
 
-    int32_t acc_l = 0;
-    int32_t acc_r = 0;
-
     for (uint32_t i = 0; i < count; i++) {
+        int32_t acc_l = 0;
+        int32_t acc_r = 0;
+
         for (int v = 0; v < NUM_CHANNELS; v++) {
             voice_next_sample_i32(&g_voices[v], &acc_l, &acc_r);
         }

@@ -179,23 +179,32 @@ void bridge_do_cmd(const bridge_msg_t* msg) {
   case CMD_AUDIO_ENABLE:
     Audio.set_enable(true);
     break;
-  case CMD_AUDIO_NOTE_DATA:
-    Audio.recv_bridge_note_data(msg->payload, msg->payload_size);
+  case CMD_AUDIO_NOTE_ON:
+    Audio.recv_bridge_note_on(msg->payload, msg->payload_size);
+    break;
+  case CMD_AUDIO_SET_FREQ:
+    Audio.recv_bridge_set_freq(msg->payload, msg->payload_size);
+    break;
+  case CMD_AUDIO_SET_VOL:
+    Audio.recv_bridge_set_vol(msg->payload, msg->payload_size);
     break;
   case CMD_AUDIO_SET_WAVE:
     Audio.recv_bridge_set_wave(msg->payload, msg->payload_size);
     break;
-  case CMD_AUDIO_SET_ENV:
-    Audio.recv_bridge_set_env(msg->payload, msg->payload_size);
+  case CMD_AUDIO_SET_MIX:
+    Audio.recv_bridge_set_wave(msg->payload, msg->payload_size);
     break;
-  case CMD_AUDIO_SET_MASTER:
-    Audio.recv_bridge_set_master(msg->payload, msg->payload_size);
+  case CMD_AUDIO_SET_VOL_ENV:
+    Audio.recv_bridge_set_vol_env(msg->payload, msg->payload_size);
     break;
   case CMD_AUDIO_SET_PIT_ENV:
     Audio.recv_bridge_set_pitch_env(msg->payload, msg->payload_size);
     break;
   case CMD_AUDIO_WAVE_DATA32:
     Audio.recv_bridge_wave_data_32s(msg->payload, msg->payload_size);
+    break;
+  case CMD_AUDIO_SET_MASTER:
+    Audio.recv_bridge_set_master(msg->payload, msg->payload_size);
     break;
   case CMD_AUDIO_DISABLE:
     Audio.set_enable(false);

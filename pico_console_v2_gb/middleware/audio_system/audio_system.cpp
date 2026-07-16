@@ -60,7 +60,7 @@ void audioSystem::set_enable(bool enable) {
     Bridge.send(CMD_AUDIO_DISABLE, 0, NULL);
 }
 
-void audioSystem::send_bridge_note_data(uint8_t ch, float freq, uint8_t volume) {
+void audioSystem::send_bridge_note_on(uint8_t ch, float freq, uint8_t volume) {
   int payload_size = 6;
   uint8_t payload_buf[PAYLOAD_MAX_SIZE];
 
@@ -68,7 +68,37 @@ void audioSystem::send_bridge_note_data(uint8_t ch, float freq, uint8_t volume) 
   memcpy(&payload_buf[1], &freq, sizeof(float));
   payload_buf[5] = volume;
 
-  Bridge.send(CMD_AUDIO_NOTE_DATA, payload_size, payload_buf);
+  Bridge.send(CMD_AUDIO_NOTE_ON, payload_size, payload_buf);
+}
+
+void audioSystem::send_bridge_note_off(uint8_t ch) {
+  int payload_size = 2;
+  uint8_t payload_buf[PAYLOAD_MAX_SIZE];
+
+  payload_buf[0] = ch;
+  payload_buf[1] = 0;
+
+  Bridge.send(CMD_AUDIO_SET_VOL, payload_size, payload_buf);
+}
+
+void audioSystem::send_bridge_set_freq(uint8_t ch, float freq) {
+  int payload_size = 5;
+  uint8_t payload_buf[PAYLOAD_MAX_SIZE];
+
+  payload_buf[0] = ch;
+  memcpy(&payload_buf[1], &freq, sizeof(float));
+
+  Bridge.send(CMD_AUDIO_SET_FREQ, payload_size, payload_buf);
+}
+
+void audioSystem::send_bridge_set_vol(uint8_t ch, uint8_t volume) {
+  int payload_size = 2;
+  uint8_t payload_buf[PAYLOAD_MAX_SIZE];
+
+  payload_buf[0] = ch;
+  payload_buf[1] = volume;
+
+  Bridge.send(CMD_AUDIO_SET_VOL, payload_size, payload_buf);
 }
 
 void audioSystem::send_bridge_set_wave(uint8_t ch, wave_t w) {
@@ -81,7 +111,18 @@ void audioSystem::send_bridge_set_wave(uint8_t ch, wave_t w) {
   Bridge.send(CMD_AUDIO_SET_WAVE, payload_size, payload_buf);
 }
 
-void audioSystem::send_bridge_set_env(uint8_t ch, uint32_t tick_us, uint8_t step) {
+void audioSystem::send_bridge_set_mix(uint8_t ch, uint8_t volume_l, uint8_t volume_r) {
+  int payload_size = 2;
+  uint8_t payload_buf[PAYLOAD_MAX_SIZE];
+
+  payload_buf[0] = ch;
+  payload_buf[1] = volume_l;
+  payload_buf[2] = volume_r;
+
+  Bridge.send(CMD_AUDIO_SET_MIX, payload_size, payload_buf);
+}
+
+void audioSystem::send_bridge_set_vol_env(uint8_t ch, uint32_t tick_us, uint8_t step) {
   int payload_size = 6;
   uint8_t payload_buf[PAYLOAD_MAX_SIZE];
 
@@ -89,7 +130,7 @@ void audioSystem::send_bridge_set_env(uint8_t ch, uint32_t tick_us, uint8_t step
   memcpy(&payload_buf[1], &tick_us, sizeof(uint32_t));
   payload_buf[5] = step;
 
-  Bridge.send(CMD_AUDIO_SET_ENV, payload_size, payload_buf);
+  Bridge.send(CMD_AUDIO_SET_VOL_ENV, payload_size, payload_buf);
 }
 
 void audioSystem::send_bridge_set_pitch_env(uint8_t ch, int32_t tick_us, int8_t target_semitones, uint8_t step) {

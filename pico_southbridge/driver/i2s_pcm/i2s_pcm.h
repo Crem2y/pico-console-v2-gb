@@ -61,10 +61,10 @@ void set_voice_waveform(int voice_idx, wave_t w);
 void set_voice_freq(int voice_idx, float freq);
 void set_voice_volume_q8(int voice_idx, int32_t vol_q8);
 void set_voice_lr_volume_q8(int voice_idx, int32_t vol_l_q8, int32_t vol_r_q8);
+void set_voice_vol_env(int voice_idx, uint32_t tick_us, int32_t decay_step_q8);
+void set_voice_pitch_env(int voice_idx, int32_t tick_us, int32_t target_semitones, int32_t step);
 
 void voice_note_on(int voice_idx, float freq, int32_t peak_vol_q8);
-void voice_vol_env_set(int voice_idx, uint32_t tick_us, int32_t decay_step_q8);
-void voice_pitch_env_set(int voice_idx, int32_t tick_us, int32_t target_semitones, int32_t step);
 
 void set_master_volume(uint8_t vol);
 void set_mute(bool mute);

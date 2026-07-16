@@ -34,7 +34,7 @@ void set_master_volume(uint8_t vol) {
     master_volume = vol;
 }
 
-void voice_vol_env_set(int voice_idx, uint32_t tick_us, int32_t decay_step_q8) {
+void set_voice_vol_env(int voice_idx, uint32_t tick_us, int32_t decay_step_q8) {
     if (voice_idx < 0 || voice_idx >= NUM_CHANNELS) return;
     if (tick_us == 0) tick_us = 1;
     g_voices[voice_idx].vol_env_tick_us = tick_us;
@@ -43,7 +43,7 @@ void voice_vol_env_set(int voice_idx, uint32_t tick_us, int32_t decay_step_q8) {
 }
 
 static inline void voice_vol_env_init(int voice_idx, uint32_t tick_us, int32_t decay_step_q8) {
-    voice_vol_env_set(voice_idx, tick_us, decay_step_q8);
+    set_voice_vol_env(voice_idx, tick_us, decay_step_q8);
 }
 
 static inline void voice_vol_env_note_on(voice_t *v, int32_t peak_vol_q8) {
@@ -59,7 +59,7 @@ static inline uint32_t pitch_env_tick_interval_us(int32_t tick_us) {
     return (tick_us < 0) ? (uint32_t)(-tick_us) : (uint32_t)tick_us;
 }
 
-void voice_pitch_env_set(int voice_idx, int32_t tick_us, int32_t target_semitones, int32_t step) {
+void set_voice_pitch_env(int voice_idx, int32_t tick_us, int32_t target_semitones, int32_t step) {
     if (voice_idx < 0 || voice_idx >= NUM_CHANNELS) return;
     g_voices[voice_idx].pit_env_tick_us = pitch_env_tick_interval_us(tick_us);
     g_voices[voice_idx].pit_env_target_semitones = target_semitones;
@@ -70,7 +70,7 @@ void voice_pitch_env_set(int voice_idx, int32_t tick_us, int32_t target_semitone
 }
 
 static inline void voice_pitch_env_init(int voice_idx, int32_t tick_us, int32_t target_semitones, int32_t step) {
-    voice_pitch_env_set(voice_idx, tick_us, target_semitones, step);
+    set_voice_pitch_env(voice_idx, tick_us, target_semitones, step);
     g_voices[voice_idx].pit_env_semitones = 0;
 }
 

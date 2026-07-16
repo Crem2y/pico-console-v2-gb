@@ -42,19 +42,32 @@ class audioSystem {
     void play_music(music_table_t* music_table, bool loop); //placeholder
     void stop_music(void);
 
+    void set_enable(bool enable);
+  
     void play_note(uint8_t ch, uint8_t octave, uint8_t note, uint8_t volume) {
-      send_bridge_note_data(ch, sound_freq_table[octave][note], volume);
+      send_bridge_note_on(ch, sound_freq_table[octave][note], volume);
     }
     void play_wave(uint8_t ch, float freq, uint8_t volume) {
-      send_bridge_note_data(ch, freq, volume);
+      send_bridge_note_on(ch, freq, volume);
+    }
+    void stop_note(uint8_t ch) {
+      send_bridge_note_off(ch);
     }
 
-    void set_enable(bool enable);
+    void set_freq(uint8_t ch, float freq) {
+      send_bridge_set_freq(ch, freq);
+    }
+    void set_vol(uint8_t ch, uint8_t volume) {
+      send_bridge_set_freq(ch, volume);
+    }
     void set_wave(uint8_t ch, wave_t w) {
       send_bridge_set_wave(ch, w);
     }
-    void set_env(uint8_t ch, uint32_t tick_us, uint8_t step) {
-      send_bridge_set_env(ch, tick_us, step);
+    void set_mix(uint8_t ch, uint8_t volume_l, uint8_t volume_r) {
+      send_bridge_set_mix(ch, volume_l, volume_r);
+    }
+    void set_vol_env(uint8_t ch, uint32_t tick_us, uint8_t step) {
+      send_bridge_set_vol_env(ch, tick_us, step);
     }
     void set_pitch_env(uint8_t ch, int32_t tick_us, int8_t target_semitones, uint8_t step) {
       send_bridge_set_pitch_env(ch, tick_us, target_semitones, step);
@@ -66,9 +79,14 @@ class audioSystem {
       send_bridge_set_master(volume);
     }
 
-    void send_bridge_note_data(uint8_t ch, float freq, uint8_t volume);
+    void send_bridge_note_on(uint8_t ch, float freq, uint8_t volume);
+    void send_bridge_note_off(uint8_t ch);
+    
+    void send_bridge_set_freq(uint8_t ch, float freq);
+    void send_bridge_set_vol(uint8_t ch, uint8_t volume);
     void send_bridge_set_wave(uint8_t ch, wave_t w);
-    void send_bridge_set_env(uint8_t ch, uint32_t tick_us, uint8_t step);
+    void send_bridge_set_mix(uint8_t ch, uint8_t volume_l, uint8_t volume_r);
+    void send_bridge_set_vol_env(uint8_t ch, uint32_t tick_us, uint8_t step);
     void send_bridge_set_pitch_env(uint8_t ch, int32_t tick_us, int8_t target_semitones, uint8_t step);
     void send_bridge_wave_data_32s(const uint8_t* wav_data);
     void send_bridge_set_master(uint8_t volume);

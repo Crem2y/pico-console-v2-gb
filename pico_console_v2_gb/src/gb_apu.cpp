@@ -115,7 +115,7 @@ static void gb_voice_stop(uint8_t voice_idx) {
   const float freq = state.freq > 0.0f ? state.freq : 440.0f;
 
   Audio.play_wave(voice_idx, freq, 0);
-  Audio.set_env(voice_idx, 0, 0);
+  Audio.set_vol_env(voice_idx, 0, 0);
   Audio.set_pitch_env(voice_idx, 0, 0, 0);
 
   state.volume = 0;
@@ -206,7 +206,7 @@ static uint32_t gb_length_256_us(uint8_t length_value, bool enabled) {
 }
 
 /*
- * Audio.set_env() 하나로 GB의 볼륨 envelope와 length counter를 동시에
+ * Audio.set_vol_env() 하나로 GB의 볼륨 envelope와 length counter를 동시에
  * 예약할 수 없으므로, length counter가 켜진 경우에는 채널 종료를 우선합니다.
  *
  * length가 꺼진 경우에만 감소 envelope를 그대로 적용합니다.
@@ -220,7 +220,7 @@ static void gb_set_volume_envelope(
   const uint8_t initial_volume = gb_initial_volume(envelope_reg);
 
   if (length_us != 0) {
-    Audio.set_env(voice_idx, length_us, initial_volume);
+    Audio.set_vol_env(voice_idx, length_us, initial_volume);
     return;
   }
 
@@ -228,14 +228,14 @@ static void gb_set_volume_envelope(
   const bool increase = (envelope_reg & 0x08) != 0;
 
   if (period == 0 || increase) {
-    Audio.set_env(voice_idx, 0, 0);
+    Audio.set_vol_env(voice_idx, 0, 0);
     return;
   }
 
   const uint32_t tick_us =
       (uint32_t)period * 1000000UL / 64UL;
 
-  Audio.set_env(voice_idx, tick_us, 17);
+  Audio.set_vol_env(voice_idx, tick_us, 17);
 }
 
 
@@ -404,9 +404,9 @@ static void gb_trigger_ch3(void) {
       gb_length_256_us(nr31, (nr34 & 0x40) != 0);
 
   if (length_us != 0 && volume != 0) {
-    Audio.set_env(GB_APU_CH3, length_us, volume);
+    Audio.set_vol_env(GB_APU_CH3, length_us, volume);
   } else {
-    Audio.set_env(GB_APU_CH3, 0, 0);
+    Audio.set_vol_env(GB_APU_CH3, 0, 0);
   }
 
   Audio.set_pitch_env(GB_APU_CH3, 0, 0, 0);

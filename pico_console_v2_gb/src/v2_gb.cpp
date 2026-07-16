@@ -453,7 +453,7 @@ void core1_entry() { // uses core 1 to main core
 
   Audio.set_master_config(127);
   for(int i=0; i<4; i++) {
-    Audio.set_env(i+4, 25000, 1);
+    Audio.set_vol_env(i+4, 25000, 1);
   }
 
   // if SELECT+START, quiet boot

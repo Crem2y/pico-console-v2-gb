@@ -29,7 +29,6 @@ struct gb_voice_state_t {
 };
 
 static gb_voice_state_t voice_state[GB_APU_CH_COUNT] = {};
-
 static bool wave_ram_dirty = false;
 
 /* -------------------------------------------------------------------------- */
@@ -52,35 +51,23 @@ static inline bool gb_master_enabled(void) {
   return (audio_reg_read(0xFF26) & 0x80) != 0;
 }
 
-
 /* -------------------------------------------------------------------------- */
 /* Common conversion helpers                                                  */
 /* -------------------------------------------------------------------------- */
 
 static float gb_pulse_frequency(uint16_t raw_freq) {
   raw_freq &= 0x07FF;
-
-  return 131072.0f /
-         (float)(2048U - raw_freq);
+  return 131072.0f / (float)(2048U - raw_freq);
 }
 
 static float gb_wave_frequency(uint16_t raw_freq) {
   raw_freq &= 0x07FF;
-
-  return 65536.0f /
-         (float)(2048U - raw_freq);
+  return 65536.0f / (float)(2048U - raw_freq);
 }
 
 static float gb_noise_frequency(uint8_t nr43) {
   static constexpr float divisor_table[8] = {
-    0.5f,
-    1.0f,
-    2.0f,
-    3.0f,
-    4.0f,
-    5.0f,
-    6.0f,
-    7.0f,
+    0.5f, 1.0f, 2.0f, 3.0f, 4.0f, 5.0f, 6.0f, 7.0f,
   };
 
   const uint8_t divisor_code = nr43 & 0x07;
@@ -92,8 +79,7 @@ static float gb_noise_frequency(uint8_t nr43) {
 }
 
 static uint8_t gb_volume_to_u8(uint8_t volume) {
-  return (uint8_t)(
-      (uint16_t)(volume & 0x0F) * 255U / 15U);
+  return (uint8_t)((uint16_t)(volume & 0x0F) * 255U / 15U);
 }
 
 static uint8_t gb_initial_volume(uint8_t envelope_reg) {
@@ -104,22 +90,15 @@ static bool gb_dac_enabled(uint8_t envelope_reg) {
   return (envelope_reg & 0xF8) != 0;
 }
 
-
 /* -------------------------------------------------------------------------- */
 /* Voice control                                                              */
 /* -------------------------------------------------------------------------- */
 
-static void gb_voice_stop(uint8_t voice_idx) {
-  gb_voice_state_t &state = voice_state[voice_idx];
+static void gb_voice_stop(uint8_t ch) {
+  Audio.stop_note(ch);
 
-  const float freq = state.freq > 0.0f ? state.freq : 440.0f;
-
-  Audio.play_wave(voice_idx, freq, 0);
-  Audio.set_vol_env(voice_idx, 0, 0);
-  Audio.set_pitch_env(voice_idx, 0, 0, 0);
-
-  state.volume = 0;
-  state.active = false;
+  voice_state[ch].volume = 0;
+  voice_state[ch].active = false;
 }
 
 static void gb_stop_all_voices(void) {
@@ -128,56 +107,36 @@ static void gb_stop_all_voices(void) {
   }
 }
 
-static void gb_play_voice(uint8_t voice_idx, float freq, uint8_t volume) {
-  gb_voice_state_t &state = voice_state[voice_idx];
+static void gb_trigger_voice(uint8_t ch, float freq, uint8_t volume) {
+  gb_voice_state_t &state = voice_state[ch];
 
   state.freq = freq;
   state.volume = volume;
-  state.active = state.dac_enabled && volume != 0;
+  state.active = state.dac_enabled;
 
-  Audio.play_wave(
-      voice_idx,
-      freq,
-      gb_master_enabled() && state.active ? volume : 0);
+  Audio.play_wave(ch, freq, gb_master_enabled() && state.active ? volume : 0);
 }
-
-static void gb_refresh_voice(uint8_t voice_idx) {
-  gb_voice_state_t &state = voice_state[voice_idx];
-
-  const float freq = state.freq > 0.0f ? state.freq : 440.0f;
-  const uint8_t volume =
-      gb_master_enabled() && state.active && state.dac_enabled
-          ? state.volume
-          : 0;
-
-  Audio.play_wave(voice_idx, freq, volume);
-}
-
 
 /* -------------------------------------------------------------------------- */
 /* Waveform conversion                                                        */
 /* -------------------------------------------------------------------------- */
 
-static void gb_set_pulse_duty(uint8_t voice_idx, uint8_t duty) {
+static void gb_set_pulse_duty(uint8_t ch, uint8_t duty) {
   switch (duty & 0x03) {
     case 0:
-      Audio.set_wave(voice_idx, WAVE_SQUARE_12);
+      Audio.set_wave(ch, WAVE_SQUARE_12);
       break;
-
     case 1:
-      Audio.set_wave(voice_idx, WAVE_SQUARE_25);
+      Audio.set_wave(ch, WAVE_SQUARE_25);
       break;
-
     case 2:
-      Audio.set_wave(voice_idx, WAVE_SQUARE_50);
+      Audio.set_wave(ch, WAVE_SQUARE_50);
       break;
-
     case 3:
-      Audio.set_wave(voice_idx, WAVE_SQUARE_75);
+      Audio.set_wave(ch, WAVE_SQUARE_75);
       break;
   }
 }
-
 
 /* -------------------------------------------------------------------------- */
 /* Length / envelope conversion                                               */
@@ -206,21 +165,19 @@ static uint32_t gb_length_256_us(uint8_t length_value, bool enabled) {
 }
 
 /*
- * Audio.set_vol_env() 하나로 GB의 볼륨 envelope와 length counter를 동시에
- * 예약할 수 없으므로, length counter가 켜진 경우에는 채널 종료를 우선합니다.
- *
- * length가 꺼진 경우에만 감소 envelope를 그대로 적용합니다.
- * 증가 envelope는 uint8_t step API로 표현할 수 없으므로 유지 처리합니다.
+ * 현재 API는 감소 envelope만 표현할 수 있습니다.
+ * 또한 volume envelope와 length counter를 동시에 예약할 수 없으므로,
+ * length가 켜져 있으면 채널 종료를 우선합니다.
  */
 static void gb_set_volume_envelope(
-    uint8_t voice_idx,
+    uint8_t ch,
     uint8_t envelope_reg,
     uint32_t length_us) {
 
   const uint8_t initial_volume = gb_initial_volume(envelope_reg);
 
   if (length_us != 0) {
-    Audio.set_vol_env(voice_idx, length_us, initial_volume);
+    Audio.set_vol_env(ch, length_us, initial_volume);
     return;
   }
 
@@ -228,16 +185,15 @@ static void gb_set_volume_envelope(
   const bool increase = (envelope_reg & 0x08) != 0;
 
   if (period == 0 || increase) {
-    Audio.set_vol_env(voice_idx, 0, 0);
+    Audio.set_vol_env(ch, 0, 0);
     return;
   }
 
   const uint32_t tick_us =
       (uint32_t)period * 1000000UL / 64UL;
 
-  Audio.set_vol_env(voice_idx, tick_us, 17);
+  Audio.set_vol_env(ch, tick_us, 17);
 }
-
 
 /* -------------------------------------------------------------------------- */
 /* CH1 sweep conversion                                                       */
@@ -265,21 +221,16 @@ static void gb_set_ch1_sweep(uint16_t raw_freq) {
           ? (int32_t)raw_freq - (int32_t)delta
           : (int32_t)raw_freq + (int32_t)delta;
 
-  /* Sweep overflow는 CH1을 끄는 조건입니다. */
   if (next_raw < 0 || next_raw > 2047) {
     gb_voice_stop(GB_APU_CH1);
     return;
   }
 
   const float current_freq = gb_pulse_frequency(raw_freq);
-  const float next_freq =
-      gb_pulse_frequency((uint16_t)next_raw);
+  const float next_freq = gb_pulse_frequency((uint16_t)next_raw);
+  const float semitones_f = 12.0f * log2f(next_freq / current_freq);
 
-  const float semitones_f =
-      12.0f * std::log2(next_freq / current_freq);
-
-  int32_t target_semitones =
-      (int32_t)(std::lround(semitones_f));
+  int32_t target_semitones = (int32_t)lroundf(semitones_f);
 
   if (target_semitones == 0) {
     target_semitones = semitones_f >= 0.0f ? 1 : -1;
@@ -291,16 +242,45 @@ static void gb_set_ch1_sweep(uint16_t raw_freq) {
     target_semitones = -128;
   }
 
-  const int32_t tick_us = (int32_t)((uint32_t)(period) * 1000000UL / 128UL);
+  const int32_t tick_us = (int32_t)((uint32_t)period * 1000000UL / 128UL);
 
-  /* tick_us는 양수로 전달하여 vibrato 모드가 되지 않게 합니다. */
-  Audio.set_pitch_env(
-      GB_APU_CH1,
-      tick_us,
-      (int8_t)target_semitones,
-      1);
+  Audio.set_pitch_env(GB_APU_CH1, tick_us, (int8_t)target_semitones, 1);
 }
 
+/* -------------------------------------------------------------------------- */
+/* Mixer                                                                      */
+/* -------------------------------------------------------------------------- */
+
+static void gb_update_channel_mix(uint8_t ch) {
+  const uint8_t nr50 = audio_reg_read(0xFF24);
+  const uint8_t nr51 = audio_reg_read(0xFF25);
+
+  /*
+   * NR50의 0~7은 실제로 1/8~8/8 단계이므로 +1로 변환합니다.
+   * set_mix(255, 255)는 추가 감쇠가 없는 상태입니다.
+   */
+  const uint8_t left_level = (uint8_t)(((nr50 >> 4) & 0x07) + 1U);
+  const uint8_t right_level = (uint8_t)((nr50 & 0x07) + 1U);
+
+  uint8_t mix_l = (uint8_t)((uint16_t)left_level * 255U / 8U);
+  uint8_t mix_r = (uint8_t)((uint16_t)right_level * 255U / 8U);
+
+  if ((nr51 & (uint8_t)(1U << (ch + 4U))) == 0) {
+    mix_l = 0;
+  }
+
+  if ((nr51 & (uint8_t)(1U << ch)) == 0) {
+    mix_r = 0;
+  }
+
+  Audio.set_mix(ch, mix_l, mix_r);
+}
+
+static void gb_update_all_mix(void) {
+  for (uint8_t ch = 0; ch < GB_APU_CH_COUNT; ++ch) {
+    gb_update_channel_mix(ch);
+  }
+}
 
 /* -------------------------------------------------------------------------- */
 /* Channel trigger functions                                                  */
@@ -328,7 +308,7 @@ static void gb_trigger_ch1(void) {
   gb_set_pulse_duty(GB_APU_CH1, nr11 >> 6);
 
   const uint8_t volume = gb_initial_volume(nr12);
-  gb_play_voice(GB_APU_CH1, state.freq, volume);
+  gb_trigger_voice(GB_APU_CH1, state.freq, volume);
 
   const uint32_t length_us =
       gb_length_64_us(nr11, (nr14 & 0x40) != 0);
@@ -359,7 +339,7 @@ static void gb_trigger_ch2(void) {
   gb_set_pulse_duty(GB_APU_CH2, nr21 >> 6);
 
   const uint8_t volume = gb_initial_volume(nr22);
-  gb_play_voice(GB_APU_CH2, state.freq, volume);
+  gb_trigger_voice(GB_APU_CH2, state.freq, volume);
 
   const uint32_t length_us =
       gb_length_64_us(nr21, (nr24 & 0x40) != 0);
@@ -380,10 +360,7 @@ static void gb_trigger_ch3(void) {
       ((uint16_t)(nr34 & 0x07) << 8);
 
   static constexpr uint8_t output_level[4] = {
-    0,
-    255,
-    127,
-    63,
+    0, 255, 127, 63,
   };
 
   gb_voice_state_t &state = voice_state[GB_APU_CH3];
@@ -395,10 +372,8 @@ static void gb_trigger_ch3(void) {
     return;
   }
 
-//  Audio.set_wave(GB_APU_CH3, WAVE_TRIANGLE);
-
   const uint8_t volume = output_level[(nr32 >> 5) & 0x03];
-  gb_play_voice(GB_APU_CH3, state.freq, volume);
+  gb_trigger_voice(GB_APU_CH3, state.freq, volume);
 
   const uint32_t length_us =
       gb_length_256_us(nr31, (nr34 & 0x40) != 0);
@@ -434,7 +409,7 @@ static void gb_trigger_ch4(void) {
   }
 
   const uint8_t volume = gb_initial_volume(nr42);
-  gb_play_voice(GB_APU_CH4, state.freq, volume);
+  gb_trigger_voice(GB_APU_CH4, state.freq, volume);
 
   const uint32_t length_us =
       gb_length_64_us(nr41, (nr44 & 0x40) != 0);
@@ -443,13 +418,13 @@ static void gb_trigger_ch4(void) {
   Audio.set_pitch_env(GB_APU_CH4, 0, 0, 0);
 }
 
-
 /* -------------------------------------------------------------------------- */
 /* Live register updates                                                      */
 /* -------------------------------------------------------------------------- */
 
 static void gb_update_ch1_frequency(void) {
-  if (!voice_state[GB_APU_CH1].active) {
+  gb_voice_state_t &state = voice_state[GB_APU_CH1];
+  if (!state.active) {
     return;
   }
 
@@ -457,12 +432,13 @@ static void gb_update_ch1_frequency(void) {
       (uint16_t)audio_reg_read(0xFF13) |
       ((uint16_t)(audio_reg_read(0xFF14) & 0x07) << 8);
 
-  voice_state[GB_APU_CH1].freq = gb_pulse_frequency(raw_freq);
-  //gb_refresh_voice(GB_APU_CH1);
+  state.freq = gb_pulse_frequency(raw_freq);
+  Audio.set_freq(GB_APU_CH1, state.freq);
 }
 
 static void gb_update_ch2_frequency(void) {
-  if (!voice_state[GB_APU_CH2].active) {
+  gb_voice_state_t &state = voice_state[GB_APU_CH2];
+  if (!state.active) {
     return;
   }
 
@@ -470,12 +446,13 @@ static void gb_update_ch2_frequency(void) {
       (uint16_t)audio_reg_read(0xFF18) |
       ((uint16_t)(audio_reg_read(0xFF19) & 0x07) << 8);
 
-  voice_state[GB_APU_CH2].freq = gb_pulse_frequency(raw_freq);
-  //gb_refresh_voice(GB_APU_CH2);
+  state.freq = gb_pulse_frequency(raw_freq);
+  Audio.set_freq(GB_APU_CH2, state.freq);
 }
 
 static void gb_update_ch3_frequency(void) {
-  if (!voice_state[GB_APU_CH3].active) {
+  gb_voice_state_t &state = voice_state[GB_APU_CH3];
+  if (!state.active) {
     return;
   }
 
@@ -483,72 +460,52 @@ static void gb_update_ch3_frequency(void) {
       (uint16_t)audio_reg_read(0xFF1D) |
       ((uint16_t)(audio_reg_read(0xFF1E) & 0x07) << 8);
 
-  voice_state[GB_APU_CH3].freq = gb_wave_frequency(raw_freq);
-  //gb_refresh_voice(GB_APU_CH3);
+  state.freq = gb_wave_frequency(raw_freq);
+  Audio.set_freq(GB_APU_CH3, state.freq);
 }
 
 static void gb_update_ch3_volume(void) {
   static constexpr uint8_t output_level[4] = {
-    0,
-    255,
-    127,
-    63,
+    0, 255, 127, 63,
   };
 
   gb_voice_state_t &state = voice_state[GB_APU_CH3];
   state.volume = output_level[(audio_reg_read(0xFF1C) >> 5) & 0x03];
-  state.active = state.dac_enabled && state.volume != 0;
 
-  gb_refresh_voice(GB_APU_CH3);
+  if (state.active && state.dac_enabled && gb_master_enabled()) {
+    Audio.set_vol(GB_APU_CH3, state.volume);
+  } else {
+    Audio.set_vol(GB_APU_CH3, 0);
+  }
 }
 
-static void gb_update_ch4_frequency(void) {
-  if (!voice_state[GB_APU_CH4].active) {
+static void gb_update_ch4_noise(void) {
+  gb_voice_state_t &state = voice_state[GB_APU_CH4];
+  const uint8_t nr43 = audio_reg_read(0xFF22);
+
+  if(nr43 & 0x08) {
+    Audio.set_wave(GB_APU_CH4, WAVE_NOISE_7);
+  } else {
+    Audio.set_wave(GB_APU_CH4, WAVE_NOISE_15);
+  }
+
+  if (!state.active) {
     return;
   }
 
-  voice_state[GB_APU_CH4].freq =
-      gb_noise_frequency(audio_reg_read(0xFF22));
-
-  //gb_refresh_voice(GB_APU_CH4);
+  state.freq = gb_noise_frequency(nr43);
+  Audio.set_freq(GB_APU_CH4, state.freq);
 }
-
 
 /* -------------------------------------------------------------------------- */
 /* Master control                                                             */
 /* -------------------------------------------------------------------------- */
 
-static void gb_update_master_volume(void) {
-  const uint8_t nr50 = audio_reg_read(0xFF24);
-
-  const uint8_t left_volume = (nr50 >> 4) & 0x07;
-  const uint8_t right_volume = nr50 & 0x07;
-
-  const uint16_t mono_volume =
-      (uint16_t)left_volume +
-      (uint16_t)right_volume;
-
-  const uint8_t master_volume =
-      (uint8_t)(mono_volume * 255U / 14U);
-
-//  Audio.set_master_config(master_volume / 8U);
-}
-
 static void gb_update_master_enable(void) {
-  const bool enabled = gb_master_enabled();
-
-  Audio.set_enable(enabled);
-
-  if (!enabled) {
+  if (!gb_master_enabled()) {
     gb_stop_all_voices();
-    return;
-  }
-
-  for (uint8_t ch = 0; ch < GB_APU_CH_COUNT; ++ch) {
-    gb_refresh_voice(ch);
   }
 }
-
 
 /* -------------------------------------------------------------------------- */
 /* Public interface                                                           */
@@ -562,12 +519,17 @@ void audio_init(uint8_t default_volume = 16) {
   Audio.set_wave(GB_APU_CH1, WAVE_SQUARE_12);
   Audio.set_wave(GB_APU_CH2, WAVE_SQUARE_12);
   Audio.set_wave(GB_APU_CH3, WAVE_CUSTOM_0);
+  Audio.set_wave(GB_APU_CH4, WAVE_NOISE_15);
+
   uint8_t temp[16] = {0,};
-  Audio.send_bridge_wave_data_32s(temp);
-  Audio.set_wave(GB_APU_CH4, WAVE_NOISE);
+  Audio.set_wave_data_32s(WAVE_CUSTOM_0, temp);
+
+  for (uint8_t ch = 0; ch < GB_APU_CH_COUNT; ++ch) {
+    Audio.set_vol(ch, 0);
+    Audio.set_mix(ch, 255, 255);
+  }
 
   Audio.set_master_config(default_volume);
-  Audio.set_enable(false);
 }
 
 void audio_write(const uint16_t addr, const uint8_t val) {
@@ -578,7 +540,7 @@ void audio_write(const uint16_t addr, const uint8_t val) {
   /* NR52는 bit 7만 저장합니다. */
   if (addr == 0xFF26) {
     audio_reg(addr) = val & 0x80;
-  } else {  
+  } else {
     audio_reg(addr) = val;
   }
 
@@ -668,7 +630,7 @@ void audio_write(const uint16_t addr, const uint8_t val) {
       break;
 
     case 0xFF22:
-      gb_update_ch4_frequency();
+      gb_update_ch4_noise();
       break;
 
     case 0xFF23:
@@ -677,19 +639,17 @@ void audio_write(const uint16_t addr, const uint8_t val) {
       }
       break;
 
-    /* Mixer / master */
+    /* Mixer */
     case 0xFF24:
-      gb_update_master_volume();
-      break;
-
     case 0xFF25:
-      /* 좌우 출력은 사용하지 않으므로 NR51은 보관만 합니다. */
+      gb_update_all_mix();
       break;
 
     case 0xFF26:
       gb_update_master_enable();
       break;
 
+    /* CH3 Wave RAM */
     case 0xFF30:
     case 0xFF31:
     case 0xFF32:

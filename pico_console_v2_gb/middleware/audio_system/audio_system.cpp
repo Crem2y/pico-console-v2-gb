@@ -102,7 +102,7 @@ void audioSystem::send_bridge_set_wave(uint8_t ch, wave_t w) {
 }
 
 void audioSystem::send_bridge_set_mix(uint8_t ch, uint8_t volume_l, uint8_t volume_r) {
-  int payload_size = 2;
+  int payload_size = 3;
   uint8_t payload_buf[PAYLOAD_MAX_SIZE];
 
   payload_buf[0] = ch;
@@ -139,7 +139,7 @@ void audioSystem::send_bridge_wave_data_32s(const uint8_t* wav_data) {
   int payload_size = 16;
   uint8_t payload_buf[PAYLOAD_MAX_SIZE];
 
-  memcpy(payload_buf, &wav_data, 16);
+  memcpy(payload_buf, wav_data, 16);
 
   Bridge.send(CMD_AUDIO_WAVE_DATA32, payload_size, payload_buf);
 }

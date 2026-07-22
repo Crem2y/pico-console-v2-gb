@@ -151,10 +151,10 @@ static inline void voice_next_sample_i32(voice_t *v, int32_t* acc_l, int32_t* ac
 
     const int32_t s = (int32_t)v->table[v->pos >> 16u];
 
-    int32_t y = (s * v->vol_q8) >> 8;
+    int32_t y = (s * v->vol_q8) / 255;
 
-    int32_t l = (y * v->vol_l_q8) >> 8;
-    int32_t r = (y * v->vol_r_q8) >> 8;
+    int32_t l = (y * v->vol_l_q8) / 255;
+    int32_t r = (y * v->vol_r_q8) / 255;
 
     v->pos += v->step;
     if (v->pos >= pos_max) v->pos -= pos_max;
@@ -217,7 +217,7 @@ void set_voice_volume_q8(int voice_idx, int32_t vol_q8) {
     if (voice_idx < 0 || voice_idx >= NUM_CHANNELS) return;
 
     if (vol_q8 < 0) vol_q8 = 0;
-    if (vol_q8 > 256) vol_q8 = 256;
+    if (vol_q8 > 255) vol_q8 = 255;
 
     g_voices[voice_idx].vol_q8 = vol_q8;
 }
@@ -226,9 +226,9 @@ void set_voice_lr_volume_q8(int voice_idx, int32_t vol_l_q8, int32_t vol_r_q8) {
     if (voice_idx < 0 || voice_idx >= NUM_CHANNELS) return;
 
     if (vol_l_q8 < 0) vol_l_q8 = 0;
-    if (vol_l_q8 > 256) vol_l_q8 = 256;
+    if (vol_l_q8 > 255) vol_l_q8 = 255;
     if (vol_r_q8 < 0) vol_r_q8 = 0;
-    if (vol_r_q8 > 256) vol_r_q8 = 256;
+    if (vol_r_q8 > 255) vol_r_q8 = 255;
 
     g_voices[voice_idx].vol_l_q8 = vol_l_q8;
     g_voices[voice_idx].vol_r_q8 = vol_r_q8;

@@ -116,7 +116,7 @@ bool scaling_2x = true;
 uint16_t* capture_buffer = (uint16_t*)PSRAM_BASE + (512 * 1024) + ROM_BANK0_SIZE;
 #endif
 
-uint8_t volume = 16;
+uint8_t volume = 30;
 
 /**
  * Returns a byte from the ROM file at the given address.
@@ -541,18 +541,18 @@ void core1_entry() { // uses core 1 to main core
         btn_check_timer = now_time;
         // set volume
         if(Gamepad.is_btn_pressed(BTN_SL)) {
-          if(volume > 0) volume--;
+          if(volume > 0) volume -= 5;
           Audio.set_master_config(volume);
           sleep_ms(100);
           Graphic.setCursor(0,0);
-          Graphic.printf("volume : %2d", volume);
+          Graphic.printf("volume : %2d ", volume);
         }
         if(Gamepad.is_btn_pressed(BTN_SR)) {
-          if(volume < 32) volume++;
+          if(volume < 255) volume += 5;
           Audio.set_master_config(volume);
           sleep_ms(100);
           Graphic.setCursor(0,0);
-          Graphic.printf("volume : %2d", volume);
+          Graphic.printf("volume : %2d ", volume);
         }
         // set frame skip
         if(Gamepad.is_btn_pressed(BTN_S1_CENTER) && Gamepad.is_btn_pressed(BTN_ZL)) {

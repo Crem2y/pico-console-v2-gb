@@ -4,7 +4,7 @@
 #define HW_INFO_VERSION 0x0100 // V1.0.0
 
 // software info
-#define SW_INFO_VERSION 0x1000 // V1.0.00
+#define SW_INFO_VERSION 0x1001 // V1.0.01
 
 // build date
 #define DATE_YY ((__DATE__ [9] - '0') * 10 + (__DATE__ [10] - '0'))

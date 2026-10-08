@@ -4,21 +4,31 @@
 
 [![Build test](https://github.com/Crem2y/pico-console-v2-gb/actions/workflows/build_test.yml/badge.svg)](https://github.com/Crem2y/pico-console-v2-gb/actions/workflows/build_test.yml)
 
-A Game Boy emulator for the Pico Console V2 platform.
+A Game Boy emulator for the [Pico Console V2](https://github.com/Crem2y/pico-console-v2) handheld platform.
 
-Audio is handled by an external RP2350-based Link-APU over a custom communication protocol.
+This project adapts the Pico-GB emulator to the custom hardware and firmware environment of Pico Console V2, including external audio processing through an RP2350-based Link-APU.
 
 ## Features
 
-- microSD ROM loading
+- Game Boy ROM loading from microSD
 - Save RAM (`.sav`) support
 - PSRAM-backed ROM storage
+- Built-in ROM file browser
 - 2x display scaling
 - External Link-APU audio processing
 - Hardware gamepad input
-- Built-in ROM file browser
+- Frame skipping and interlace mode
+- BMP screenshot capture
 
-### Controls
+## Implementation
+
+- **Platform**: Pico Console V2
+- **Emulator lineage**: Peanut-GB → RP2040-GB → Pico-GB
+- **ROM storage**: External PSRAM
+- **Audio**: External RP2350-based Link-APU using a custom communication protocol
+- **Display**: Native and 2x scaling modes
+
+## Controls
 
 | Action              | Joypad              |
 |---------------------|---------------------|
@@ -62,19 +72,17 @@ git clone --recurse-submodules https://github.com/Crem2y/pico-console-v2-gb.git
 ./pico_clean.sh
 ```
 
-## Photos
-- working!
+## Hardware
 
-## Schematics & PCB
-- See [pico-console-v2-pcb](https://github.com/Crem2y/pico-console-v2-pcb) for details.
+This application runs on the Pico Console V2 platform.
 
----
+- [Pico Console V2 Firmware](https://github.com/Crem2y/pico-console-v2)
+- [RP2350A Main Board](https://github.com/Crem2y/rp2350a_main_board)
+- [Pico Console V2 PCB](https://github.com/Crem2y/pico-console-v2-pcb)
 
 ## License
 - This project is licensed under the MIT License.  
 - See [LICENSE](./LICENSE) for details.
-
----
 
 ### Credits
 
